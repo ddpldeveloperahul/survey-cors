@@ -289,15 +289,34 @@ class SurveySubSiteCreateAPI(APIView):
 #Survey Location       
 class SurveyLocationAPI(APIView):
     permission_classes = [IsAuthenticated]
+    # def post(self, request, subsite_id=None):
+    #     serializer = SurveyLocationSerializer(data=request.data)
+    #     if serializer.is_valid(raise_exception=True):
+    #         subsite = get_object_or_404(SurveySubSite, id=subsite_id)
+    #         serializer.save(survey=subsite)
+    #         # return Response(serializer.data, status=201)
+    #         return Response({"message": "Location created successfully", "location_id": serializer.data['id']}, status=201)
+    #     else:
+    #         return Response(serializer.errors, status=400)
     def post(self, request, subsite_id=None):
+
+        subsite = get_object_or_404(SurveySubSite, id=subsite_id)
+
+        # ✅ CHECK: Location already exists
+        if hasattr(subsite, "surveylocation"):
+            return Response(
+                {
+                    "message": "Location data already exists for this subsite",
+                    "location_id": subsite.surveylocation.id
+                },
+                status=status.HTTP_200_OK
+            )
+
         serializer = SurveyLocationSerializer(data=request.data)
-        if serializer.is_valid(raise_exception=True):
-            subsite = get_object_or_404(SurveySubSite, id=subsite_id)
-            serializer.save(survey=subsite)
-            # return Response(serializer.data, status=201)
-            return Response({"message": "Location created successfully", "location_id": serializer.data['id']}, status=201)
-        else:
-            return Response(serializer.errors, status=400)
+        serializer.is_valid(raise_exception=True)
+        serializer.save(survey=subsite)
+
+        return Response(serializer.data, status=201)
 
     def get(self, request, subsite_id=None):
         locations = SurveyLocation.objects.filter(survey_id=subsite_id)
@@ -322,13 +341,30 @@ class SurveyMonumentAPI(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, subsite_id=None):
+
+        subsite = get_object_or_404(SurveySubSite, id=subsite_id)
+
+        # ✅ CHECK: Monument already exists
+        if hasattr(subsite, "surveymonument"):
+            return Response(
+                {
+                    "message": "Monument data already exists for this subsite",
+                    "monument_id": subsite.surveymonument.id
+                },
+                status=status.HTTP_200_OK
+            )
+
         serializer = SurveyMonumentSerializer(data=request.data)
-        if serializer.is_valid(raise_exception=True):
-            subsite = get_object_or_404(SurveySubSite, id=subsite_id)
-            serializer.save(survey=subsite)
-            return Response({"message": "Monument created successfully", "monument_id": serializer.data['id']}, status=201)
-        else:
-            return Response(serializer.errors, status=400)
+        serializer.is_valid(raise_exception=True)
+        serializer.save(survey=subsite)
+
+        return Response(
+            {
+                "message": "Monument created successfully",
+                "monument_id": serializer.data["id"]
+            },
+            status=status.HTTP_201_CREATED
+        )
     def get(self, request, subsite_id=None):
         monuments = SurveyMonument.objects.filter(survey_id=subsite_id)
         serializer = SurveyMonumentSerializer(monuments, many=True)
@@ -350,14 +386,33 @@ class SurveyMonumentAPI(APIView):
 class SurveySkyVisibilityAPI(APIView):
     permission_classes = [IsAuthenticated]
 
+    # def post(self, request, subsite_id=None):
+    #     serializer = SurveySkyVisibilitySerializer(data=request.data)
+    #     if serializer.is_valid(raise_exception=True):
+    #         subsite = get_object_or_404(SurveySubSite, id=subsite_id)
+    #         serializer.save(survey=subsite)
+    #         return Response({"message": "Sky Visibility created successfully", "sky_visibility_id": serializer.data['id']}, status=201)
+    #     else:
+    #         return Response(serializer.errors, status=400)
     def post(self, request, subsite_id=None):
+
+        subsite = get_object_or_404(SurveySubSite, id=subsite_id)
+
+        # ✅ CHECK: Sky Visibility already exists
+        if hasattr(subsite, "surveyskyvisibility"):
+            return Response(
+                {
+                    "message": "Sky Visibility data already exists for this subsite",
+                    "sky_visibility_id": subsite.surveyskyvisibility.id
+                },
+                status=status.HTTP_200_OK
+            )
+
         serializer = SurveySkyVisibilitySerializer(data=request.data)
-        if serializer.is_valid(raise_exception=True):
-            subsite = get_object_or_404(SurveySubSite, id=subsite_id)
-            serializer.save(survey=subsite)
-            return Response({"message": "Sky Visibility created successfully", "sky_visibility_id": serializer.data['id']}, status=201)
-        else:
-            return Response(serializer.errors, status=400)
+        serializer.is_valid(raise_exception=True)
+        serializer.save(survey=subsite)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    
     def get(self, request, subsite_id=None):
         sky_visibilities = SurveySkyVisibility.objects.filter(survey_id=subsite_id)
         serializer = SurveySkyVisibilitySerializer(sky_visibilities, many=True)
@@ -378,15 +433,40 @@ class SurveySkyVisibilityAPI(APIView):
 #ADD POWER DETAILS
 class SurveyPowerAPI(APIView):
     permission_classes = [IsAuthenticated]
+    # def post(self, request, subsite_id=None):
+    #     serializer = SurveyPowerSerializer(data=request.data)
+    #     if serializer.is_valid(raise_exception=True):
+    #         serializer.is_valid(raise_exception=True)
+    #         subsite = get_object_or_404(SurveySubSite, id=subsite_id)
+    #         serializer.save(survey=subsite)
+    #         return Response({"message": "Power Details created successfully", "power_id": serializer.data['id']}, status=201)
+    #     else:
+    #         return Response(serializer.errors, status=400)
     def post(self, request, subsite_id=None):
+
+        subsite = get_object_or_404(SurveySubSite, id=subsite_id)
+
+        # ✅ CHECK: Power details already exist
+        if hasattr(subsite, "surveypower"):
+            return Response(
+                {
+                    "message": "Power details already exist for this subsite",
+                    "power_id": subsite.surveypower.id
+                },
+                status=status.HTTP_200_OK
+            )
+
         serializer = SurveyPowerSerializer(data=request.data)
-        if serializer.is_valid(raise_exception=True):
-            serializer.is_valid(raise_exception=True)
-            subsite = get_object_or_404(SurveySubSite, id=subsite_id)
-            serializer.save(survey=subsite)
-            return Response({"message": "Power Details created successfully", "power_id": serializer.data['id']}, status=201)
-        else:
-            return Response(serializer.errors, status=400)
+        serializer.is_valid(raise_exception=True)
+        serializer.save(survey=subsite)
+
+        return Response(
+            {
+                "message": "Power details created successfully",
+                "power_id": serializer.data["id"]
+            },
+            status=status.HTTP_201_CREATED
+        )
     def get(self, request, subsite_id=None):
         powers = SurveyPower.objects.filter(survey_id=subsite_id)
         serializer = SurveyPowerSerializer(powers, many=True)
@@ -411,13 +491,30 @@ class SurveyConnectivityAPI(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, subsite_id=None):
+
+        subsite = get_object_or_404(SurveySubSite, id=subsite_id)
+
+        # ✅ CHECK: Connectivity already exists
+        if hasattr(subsite, "surveyconnectivity"):
+            return Response(
+                {
+                    "message": "Connectivity details already exist for this subsite",
+                    "connectivity_id": subsite.surveyconnectivity.id
+                },
+                status=status.HTTP_200_OK
+            )
+
         serializer = SurveyConnectivitySerializer(data=request.data)
-        if serializer.is_valid(raise_exception=True):
-            subsite = get_object_or_404(SurveySubSite, id=subsite_id)
-            serializer.save(survey=subsite)
-            return Response({"message": "Connectivity Details created successfully", "connectivity_id": serializer.data['id']}, status=201)
-        else:
-            return Response(serializer.errors, status=400)
+        serializer.is_valid(raise_exception=True)
+        serializer.save(survey=subsite)
+
+        return Response(
+            {
+                "message": "Connectivity details created successfully",
+                "connectivity_id": serializer.data["id"]
+            },
+            status=status.HTTP_201_CREATED
+        )
     def get(self, request, subsite_id=None):
         connectivities = SurveyConnectivity.objects.filter(survey_id=subsite_id)
         serializer = SurveyConnectivitySerializer(connectivities, many=True)
@@ -440,13 +537,35 @@ class SurveyConnectivityAPI(APIView):
 class SurveyPhotoUploadAPI(APIView):
     permission_classes = [IsAuthenticated]
     def post(self, request, subsite_id=None):
+
+        subsite = get_object_or_404(SurveySubSite, id=subsite_id)
+
+        # ✅ CHECK: Photos already exist
+        try:
+            photos = subsite.photos   # related_name="photos"
+        except SurveyPhoto.DoesNotExist:
+            photos = None
+
+        if photos:
+            return Response(
+                {
+                    "message": "Photo data already exists for this subsite",
+                    "photo_id": photos.id
+                },
+                status=status.HTTP_200_OK
+            )
+
         serializer = SurveyPhotoSerializer(data=request.data)
-        if serializer.is_valid(raise_exception=True):
-            subsite = get_object_or_404(SurveySubSite, id=subsite_id)
-            serializer.save(sub_site=subsite)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        else:
-            return Response(serializer.errors, status=400)
+        serializer.is_valid(raise_exception=True)
+        serializer.save(sub_site=subsite)
+
+        return Response(
+            {
+                "message": "Photos uploaded successfully",
+                "photo_id": serializer.data["id"]
+            },
+            status=status.HTTP_201_CREATED
+        )
     def get(self, request, subsite_id=None):
         subsite = get_object_or_404(SurveySubSite, id=subsite_id)
         photos = SurveyPhoto.objects.filter(sub_site=subsite)
