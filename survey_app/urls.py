@@ -64,7 +64,8 @@ urlpatterns = [
     path("survey/pending/",PendingSurveyAPI.as_view(),name="survey-pending"),
     
     
-    path("map-data/", SurveyMapDataAPI.as_view(), name="map-data"),
+    path("survey/map/", SurveyMapDataAPI.as_view()),
+    path("survey/map/<uuid:location_id>/", SurveyMapDataAPI.as_view()),
     path("map/", survey_map_view, name="survey-map"),
     path("signup_front/", signup_view, name="signup"),
     path("login_front/", login_view, name="login"),

@@ -71,6 +71,22 @@ class SurveyCreateAPI(APIView):
             # return Response({"message": "Survey created successfully", "survey_id": serializer.data['id']}, status=201)
         else:
             return Response(serializer.errors, status=400)
+    
+    # def post(self, request):
+    # # 🔍 only site_name duplicate check
+    #     if Survey.objects.filter(site_name=request.data.get("site_name")).exists():
+    #         return Response(
+    #             {"site_name": "Survey with this site name already exists"},
+    #             status=status.HTTP_400_BAD_REQUEST
+    #         )
+
+    #     serializer = SurveySerializer(data=request.data)
+    #     serializer.is_valid(raise_exception=True)
+    #     serializer.save(surveyor=request.user)
+
+    #     return Response(serializer.data, status=status.HTTP_201_CREATED)
+    
+    
     def get(self, request, survey_id=None):
         if survey_id:
             survey = get_object_or_404(Survey, id=survey_id, surveyor=request.user)
@@ -247,44 +263,198 @@ class SurveySubmitAPI(APIView):
             {"message": "Survey submitted successfully"},
             status=status.HTTP_200_OK
         )
+ 
+    # def post(self, request, survey_id):
+
+        survey = get_object_or_404(
+            Survey,
+            id=survey_id,
+            surveyor=request.user
+        )
+
+        # ✅ Allow only DRAFT or REJECTED survey to submit
+        if survey.status not in ["DRAFT", "REJECTED"]:
+            return Response(
+                {"error": f"Survey cannot be submitted in current state is {survey.status}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        subsites = survey.subsites.all()
+
+        if not subsites.exists():
+            return Response(
+                {"error": "No subsites found"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        incomplete_subsites = []
+
+        for subsite in subsites:
+            missing = []
+
+            if not hasattr(subsite, "surveylocation"):
+                missing.append("Location")
+
+            if not hasattr(subsite, "surveymonument"):
+                missing.append("Monument")
+
+            if not hasattr(subsite, "surveyskyvisibility"):
+                missing.append("Sky Visibility")
+
+            if not hasattr(subsite, "surveypower"):
+                missing.append("Power")
+
+            if not hasattr(subsite, "surveyconnectivity"):
+                missing.append("Connectivity")
+
+            # ✅ Photo check (OneToOne safe)
+            try:
+                photos = subsite.photos
+            except SurveyPhoto.DoesNotExist:
+                photos = None
+
+            if not photos:
+                missing.append("Photos")
+            else:
+                if not all([
+                    photos.north_photo,
+                    photos.east_photo,
+                    photos.south_photo,
+                    photos.west_photo
+                ]):
+                    missing.append("All 4 directional photos required")
+
+            if missing:
+                incomplete_subsites.append({
+                    "subsite_id": str(subsite.id),
+                    "subsite_name": subsite.subsite_name,
+                    "missing": missing
+                })
+
+        # ❌ If validation fails
+        if incomplete_subsites:
+            return Response(
+                {
+                    "error": "Survey cannot be submitted",
+                    "status": survey.status,
+                    "rejection_reason": survey.rejection_reason,
+                    "incomplete_subsites": incomplete_subsites
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # ✅ Clear rejection reason & submit again
+        survey.status = "SUBMITTED"
+        survey.rejection_reason = None
+        survey.save()
+
+        return Response(
+            {
+                "message": "Survey submitted successfully",
+                "survey_id": survey.id,
+                "status": survey.status
+            },
+            status=status.HTTP_200_OK
+        )
+
 
 class SurveySubSiteCreateAPI(APIView):
     permission_classes = [IsAuthenticated]
+    # CREATE SUBSITE
+    def post(self, request, survey_id):
+        survey = get_object_or_404(Survey, id=survey_id)
 
-    def post(self, request, survey_id=None):
         serializer = SurveySubSiteSerializer(data=request.data)
-        if serializer.is_valid(raise_exception=True):   
-            serializer.is_valid(raise_exception=True)
-            survey = get_object_or_404(Survey, id=survey_id)
-            serializer.save(survey=survey)
-            # return Response(serializer.data, status=201)
-            return Response({"message": "Subsite created successfully", "subsite_id": serializer.data['id']}, status=201)
-        else:
-            return Response(serializer.errors, status=400)
+        serializer.is_valid(raise_exception=True)
 
-    def get(self, request, survey_id, subsite_id=None):
-        # 🔹 Get single subsite
-        if subsite_id:
-            subsite = get_object_or_404(SurveySubSite,id=subsite_id,survey_id=survey_id)
-            serializer = SurveySubSiteSerializer(subsite)
-            return Response(serializer.data)
+        subsite = serializer.save(survey=survey)
 
-        # 🔹 Get all subsites of a survey
+        return Response(
+            {
+                "message": "Subsite created successfully",
+                "subsite_id": subsite.id,
+                "priority": subsite.priority
+            },
+            status=status.HTTP_201_CREATED
+        )
+
+    # LIST SUBSITES
+    def get(self, request, survey_id):
         subsites = SurveySubSite.objects.filter(survey_id=survey_id)
         serializer = SurveySubSiteSerializer(subsites, many=True)
-        return Response(serializer.data)
-    def delete(self, request, survey_id=None, subsite_id=None):
-        subsite = get_object_or_404(SurveySubSite, id=subsite_id, survey_id=survey_id)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    # UPDATE SUBSITE
+    def put(self, request, survey_id, subsite_id):
+        subsite = get_object_or_404(
+            SurveySubSite,
+            id=subsite_id,
+            survey_id=survey_id
+        )
+
+        serializer = SurveySubSiteSerializer(
+            subsite,
+            data=request.data,
+            partial=True
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    # DELETE SUBSITE
+    def delete(self, request, survey_id, subsite_id):
+        subsite = get_object_or_404(
+            SurveySubSite,
+            id=subsite_id,
+            survey_id=survey_id
+        )
         subsite.delete()
-        return Response({"message": "Subsite deleted successfully"}, status=204)
-    def put(self, request, survey_id=None, subsite_id=None):
-        subsite = get_object_or_404(SurveySubSite, id=subsite_id, survey_id=survey_id)
-        serializer = SurveySubSiteSerializer(subsite, data=request.data, partial=True)
-        if serializer.is_valid(raise_exception=True):
-            serializer.save()
-            return Response(serializer.data)
-        else:
-            return Response(serializer.errors, status=400)
+
+        return Response(
+            {"message": "Subsite deleted successfully"},
+            status=status.HTTP_204_NO_CONTENT
+        )
+    # def post(self, request, survey_id):
+    #     survey = get_object_or_404(Survey, id=survey_id)
+
+    #     serializer = SurveySubSiteSerializer(data=request.data)
+    #     serializer.is_valid(raise_exception=True)
+
+    #     subsite = serializer.save(survey=survey)
+
+    #     return Response(
+    #         {
+    #             "message": "Subsite created successfully",
+    #             "subsite_id": subsite.id,
+    #             "priority": subsite.priority
+    #         },
+    #         status=status.HTTP_201_CREATED
+    #     )
+
+    # def get(self, request, survey_id, subsite_id=None):
+    #     # 🔹 Get single subsite
+    #     if subsite_id:
+    #         subsite = get_object_or_404(SurveySubSite,id=subsite_id,survey_id=survey_id)
+    #         serializer = SurveySubSiteSerializer(subsite)
+    #         return Response(serializer.data)
+
+    #     # 🔹 Get all subsites of a survey
+    #     subsites = SurveySubSite.objects.filter(survey_id=survey_id)
+    #     serializer = SurveySubSiteSerializer(subsites, many=True)
+    #     return Response(serializer.data)
+    # def delete(self, request, survey_id=None, subsite_id=None):
+    #     subsite = get_object_or_404(SurveySubSite, id=subsite_id, survey_id=survey_id)
+    #     subsite.delete()
+    #     return Response({"message": "Subsite deleted successfully"}, status=204)
+    # def put(self, request, survey_id=None, subsite_id=None):
+    #     subsite = get_object_or_404(SurveySubSite, id=subsite_id, survey_id=survey_id)
+    #     serializer = SurveySubSiteSerializer(subsite, data=request.data, partial=True)
+    #     if serializer.is_valid(raise_exception=True):
+    #         serializer.save()
+    #         return Response(serializer.data)
+    #     else:
+    #         return Response(serializer.errors, status=400)
     
 #Survey Location       
 class SurveyLocationAPI(APIView):
@@ -801,14 +971,44 @@ def survey_map_view(request):
     return render(request, "map.html")
 
 
+# class SurveyMapDataAPI(APIView):
+#     def get(self, request):
+#         data = []
+
+#         locations = SurveyLocation.objects.select_related("survey")
+
+#         for loc in locations:
+#             photos = getattr(loc.survey, "photos", None)
+
+#             data.append({
+#                 "id": str(loc.survey.id),
+#                 "lat": float(loc.latitude),
+#                 "lon": float(loc.longitude),
+#                 "address": loc.address,
+#                 "city": loc.city,
+#                 "district": loc.district,
+#                 "state": loc.state,
+#                 "photos": {
+#                     "north": photos.north_photo.url if photos else None,
+#                     "east": photos.east_photo.url if photos else None,
+#                     "south": photos.south_photo.url if photos else None,
+#                     "west": photos.west_photo.url if photos else None,
+#                 }
+#             })
+
+#         return Response(data)
 class SurveyMapDataAPI(APIView):
+
     def get(self, request):
         data = []
 
         locations = SurveyLocation.objects.select_related("survey")
 
         for loc in locations:
-            photos = getattr(loc.survey, "photos", None)
+            try:
+                photos = loc.survey.photos
+            except SurveyPhoto.DoesNotExist:
+                photos = None
 
             data.append({
                 "id": str(loc.survey.id),
@@ -819,13 +1019,69 @@ class SurveyMapDataAPI(APIView):
                 "district": loc.district,
                 "state": loc.state,
                 "photos": {
-                    "north": photos.north_photo.url if photos else None,
-                    "east": photos.east_photo.url if photos else None,
-                    "south": photos.south_photo.url if photos else None,
-                    "west": photos.west_photo.url if photos else None,
+                    "north": photos.north_photo.url if photos and photos.north_photo else None,
+                    "east": photos.east_photo.url if photos and photos.east_photo else None,
+                    "south": photos.south_photo.url if photos and photos.south_photo else None,
+                    "west": photos.west_photo.url if photos and photos.west_photo else None,
                 }
             })
 
-        return Response(data)
+        return Response(data, status=status.HTTP_200_OK)
+    
+    def post(self, request):
+        serializer = SurveyLocationSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        subsite = serializer.validated_data["survey"]
+
+        # ✅ Prevent duplicate
+        if hasattr(subsite, "surveylocation"):
+            return Response(
+                {
+                    "message": "Location data already exists",
+                    "location_id": subsite.surveylocation.id
+                },
+                status=status.HTTP_200_OK
+            )
+
+        location = serializer.save()
+
+        return Response(
+            {
+                "message": "Location created successfully",
+                "location_id": location.id
+            },
+            status=status.HTTP_201_CREATED
+        )
+    def put(self, request, location_id):
+        location = get_object_or_404(SurveyLocation, id=location_id)
+
+        serializer = SurveyLocationSerializer(
+            location,
+            data=request.data,
+            partial=True
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        return Response(
+            {
+                "message": "Location updated successfully",
+                "location_id": location.id
+            },
+            status=status.HTTP_200_OK
+        )
+        
+    def delete(self, request, location_id):
+        location = get_object_or_404(SurveyLocation, id=location_id)
+        location.delete()
+
+        return Response(
+            {"message": "Location deleted successfully"},
+            status=status.HTTP_204_NO_CONTENT
+        )
+
+
+
 
 #Approve / Reject

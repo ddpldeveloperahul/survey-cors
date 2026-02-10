@@ -127,10 +127,17 @@ class SurveySubSite(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     survey = models.ForeignKey(Survey,related_name="subsites",on_delete=models.CASCADE)
     subsite_name = models.CharField(max_length=150)
+    priority = models.IntegerField(
+        default=1,
+        help_text="Priority of subsite (lower number = higher priority)"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ["priority", "created_at"]
 
     def __str__(self):
-        return self.subsite_name
+        return f"{self.subsite_name} (Priority {self.priority})"
 
 class SurveyLocation(models.Model):
     survey = models.OneToOneField(SurveySubSite, on_delete=models.CASCADE)

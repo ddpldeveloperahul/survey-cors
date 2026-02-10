@@ -56,8 +56,14 @@ class SurveySerializer(serializers.ModelSerializer):
 class SurveySubSiteSerializer(serializers.ModelSerializer):
     class Meta:
         model = SurveySubSite
-        fields = ["id", "subsite_name", "created_at"]
-        read_only_fields = ["id", "created_at"]
+        fields = [
+            "id",
+            "survey",        # ✅ ADD THIS
+            "subsite_name",
+            "priority",
+            "created_at",
+        ]
+        read_only_fields = ["id", "survey", "created_at"]
 
 
 class SurveyLocationSerializer(serializers.ModelSerializer):
