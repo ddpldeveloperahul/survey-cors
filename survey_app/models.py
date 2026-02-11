@@ -122,7 +122,6 @@ class Survey(models.Model):
     def __str__(self):
         return self.site_name
 
-
 class SurveySubSite(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     survey = models.ForeignKey(Survey,related_name="subsites",on_delete=models.CASCADE)
@@ -151,7 +150,6 @@ class SurveyLocation(models.Model):
     def __str__(self):
         return f"Location for {self.survey.subsite_name}"
 
-
 class SurveyMonument(models.Model):
     MONUMENT_TYPE = [("GROUND", "Ground"), ("ROOFTOP", "Rooftop")]
 
@@ -164,17 +162,42 @@ class SurveyMonument(models.Model):
     def  __str__(self):
         return f"Monument for {self.survey.subsite_name}"
 
-    
-    
+EMI_SOURCE_CHOICES = [
+    "HT Powerline",
+    "Distribution Powerline",
+    "Transformer",
+    "Mobile Tower",
+    "Other Radio Transmitter",
+    "Electric Grid Station",
+    "Water body",
+    "Glazed window or Surface",
+    "Others",
+]
+
+
 class SurveySkyVisibility(models.Model):
-    survey = models.OneToOneField(SurveySubSite, on_delete=models.CASCADE)
-    obstruction_data = models.JSONField(help_text="add the lan,long and vertical angel obstruction data here")
-    multipath_risk = models.BooleanField()
-    emi_sources = models.TextField()
-    
+    survey = models.OneToOneField(
+        "SurveySubSite",
+        on_delete=models.CASCADE,
+        related_name="surveyskyvisibility"
+    )
+
+    polar_chart_image = models.ImageField(
+        upload_to="sky_visibility/",
+        null=True,
+        blank=True
+    )
+
+    # List of EMI objects
+    multipath_emi_source = models.JSONField(
+        default=list,
+        blank=True
+    )
+
+    remarks = models.TextField(blank=True)
+
     def __str__(self):
         return f"Sky Visibility for {self.survey.subsite_name}"
-
 
 
 class SurveyPower(models.Model):
@@ -185,41 +208,34 @@ class SurveyPower(models.Model):
     
     def __str__(self):
         return f"Power Details for {self.survey.subsite_name}"
-
-
+    
+PROVIDER_CHOICES = [
+    "Airtel",
+    "Vodafone Idea",
+    "JIO",
+    "BSNL",
+    "Others",
+]
 
 class SurveyConnectivity(models.Model):
-    survey = models.OneToOneField(SurveySubSite, on_delete=models.CASCADE)
-    gsm_4g = models.BooleanField()
-    broadband = models.BooleanField()
-    fiber = models.BooleanField()
+    survey = models.OneToOneField(
+        SurveySubSite,
+        on_delete=models.CASCADE,
+        related_name="surveyconnectivity"
+    )
+
+    # ✅ Multiselect checkbox → LIST
+    gsm_4g = models.JSONField(default=list, blank=True)
+    broadband = models.JSONField(default=list, blank=True)
+    fiber = models.JSONField(default=list, blank=True)
+    # ✅ FREE TEXT FOR "OTHERS"
+    others_gsm_4g = models.CharField(max_length=255, blank=True)
+    others_broadband = models.CharField(max_length=255, blank=True)
+    others_fiber = models.CharField(max_length=255, blank=True)
     remarks = models.TextField(blank=True)
+
     def __str__(self):
-        return f"Connectivity Details for {self.survey.subsite_name}"           
-
-
-
-# class SurveyPhoto(models.Model):
-#     DIRECTION = [
-#         ("NORTH", "North"),
-#         ("EAST", "East"),
-#         ("SOUTH", "South"),
-#         ("WEST", "West"),
-#     ]
-
-#     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-#     sub_site = models.ForeignKey(SurveySubSite,on_delete=models.CASCADE,null=True,blank=True)
-#     # direction = models.CharField(max_length=10, choices=DIRECTION)
-#     north_photo = models.ImageField(upload_to="survey_photos/", null=True, blank=True)
-#     east_photo = models.ImageField(upload_to="survey_photos/", null=True, blank=True)
-#     south_photo = models.ImageField(upload_to="survey_photos/", null=True, blank=True)
-#     west_photo = models.ImageField(upload_to="survey_photos/", null=True, blank=True)
-#     # image = models.ImageField(upload_to="survey_photos/")
-#     captured_at = models.DateTimeField(auto_now_add=True)
-    
-#     def __str__(self):
-#         return f"Photos of {self.sub_site.subsite_name}"
-
+        return f"Connectivity Details for {self.survey.subsite_name}"
 
 class SurveyPhoto(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -236,11 +252,6 @@ class SurveyPhoto(models.Model):
     
     def  __str__(self):
         return f"Photos of {self.sub_site.subsite_name}"
-
-
-
-
-
 
 class SurveyApproval(models.Model):
     LEVEL_CHOICES = [
