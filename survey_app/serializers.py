@@ -31,6 +31,8 @@ class SignupSerializer(serializers.ModelSerializer):
         Token.objects.create(user=user)
 
         return user
+    
+
 
 class LoginSerializer(serializers.Serializer):
     username = serializers.CharField()
@@ -45,6 +47,23 @@ class LoginSerializer(serializers.Serializer):
             raise serializers.ValidationError("Invalid username or password")
         data["user"] = user
         return data
+
+# serializers.py
+
+class UserListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = [
+            "id",
+            "username",
+            "name",
+            "email",
+            "mobile",
+            "role",
+            "zone",
+            "created_at",
+        ]
+
 
 class SurveySerializer(serializers.ModelSerializer):
     class Meta:
@@ -63,6 +82,39 @@ class SurveySubSiteSerializer(serializers.ModelSerializer):
             "created_at",
         ]
         read_only_fields = ["id", "survey", "created_at"]
+
+# serializers.py
+
+from rest_framework import serializers
+from .models import Survey, SurveySubSite
+
+
+# 🔹 Subsite Serializer
+class SubSiteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SurveySubSite
+        fields = [
+            "id",
+            "subsite_name",
+            "priority",
+            "created_at",
+        ]
+
+
+# 🔹 Site + Subsite Serializer
+class SiteWithSubSiteSerializer(serializers.ModelSerializer):
+    subsites = SubSiteSerializer(many=True)
+
+    class Meta:
+        model = Survey
+        fields = [
+            "id",
+            "site_name",
+            "status",
+            "created_at",
+            "subsites",
+        ]
+
 
 
 class SurveyLocationSerializer(serializers.ModelSerializer):
@@ -247,3 +299,21 @@ class SurveyApprovalSerializer(serializers.ModelSerializer):
     class Meta:
         model = SurveyApproval
         fields = "__all__"
+
+
+
+
+
+class RinexFileSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = RinexFile
+        fields = ["id", "file", "uploaded_at"]
+        read_only_fields = ["id", "uploaded_at"]
+
+    def validate_file(self, value):
+        if value and not value.name.lower().endswith(('.obs', '.nav', '.rnx')):
+            raise serializers.ValidationError(
+                "Only RINEX files (.obs, .nav, .rnx) are allowed"
+            )
+        return value

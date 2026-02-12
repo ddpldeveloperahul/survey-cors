@@ -70,4 +70,11 @@ urlpatterns = [
     path("signup_front/", signup_view, name="signup"),
     path("login_front/", login_view, name="login"),
     path("logout/", logout_view, name="logout"),
+    
+    path("users/", AllUsersAPI.as_view(), name="all-users"),
+    path("users/role/<str:role>/", RoleWiseUsersAPI.as_view(), name="role-wise-users"),
+  
+    path("rinex/upload/", RinexUploadAPI.as_view(), name="rinex-upload"),
+    path("rinex/upload/<uuid:file_id>/", RinexUploadAPI.as_view(), name="rinex-delete"),
+     path("hierarchy/sites/", HierarchySiteSubSiteAPI.as_view(), name="hierarchy-sites"),
 ]

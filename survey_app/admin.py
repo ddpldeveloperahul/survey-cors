@@ -36,5 +36,10 @@ admin.site.register(SurveyMonument)
 admin.site.register(SurveySkyVisibility)
 admin.site.register(SurveyPower)
 admin.site.register(SurveyConnectivity)
-admin.site.register(SurveyApproval)
+# admin.site.register(SurveyApproval)
+
+
+@admin.register(SurveyApproval)
+class SurveyApprovalAdmin(admin.ModelAdmin):
+    list_display = ("id", "survey", "approval_level", "approved_by", "decision", "remarks", "approved_at")
 

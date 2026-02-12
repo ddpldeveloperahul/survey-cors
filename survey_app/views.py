@@ -48,6 +48,36 @@ class LoginAPI(APIView):
             "token": token.key
         })
 
+class AllUsersAPI(APIView):
+    permission_classes = [IsAuthenticated]  # Change if needed
+
+    def get(self, request):
+        users = User.objects.all().order_by("-created_at")
+        serializer = UserListSerializer(users, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+class RoleWiseUsersAPI(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, role):
+
+        # Validate role
+        valid_roles = [choice[0] for choice in User.ROLE_CHOICES]
+
+        if role.upper() not in valid_roles:
+            return Response(
+                {"error": "Invalid role"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        users = User.objects.filter(role=role.upper())
+
+        serializer = UserListSerializer(users, many=True)
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+
 def home(request):
     return render(request, "home.html")
 
@@ -459,6 +489,7 @@ class SurveySkyVisibilityAPI(APIView):
         sky = serializer.save(survey=subsite)
 
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+        
 
     # READ
     def get(self, request, subsite_id):
@@ -538,8 +569,6 @@ class SurveyPowerAPI(APIView):
     def get(self, request, subsite_id=None):
         powers = SurveyPower.objects.filter(survey_id=subsite_id)
         serializer = SurveyPowerSerializer(powers, many=True)
-        return Response(serializer.data)
-    
         return Response(serializer.data)
     def put(self, request, subsite_id=None):
         power = get_object_or_404(SurveyPower, survey_id=subsite_id)
@@ -699,6 +728,13 @@ class SurveyApprovalAPI(APIView):
 
         survey = get_object_or_404(Survey, id=survey_id)
 
+        # 🚫 Prevent self approval
+        if survey.surveyor == user:
+            return Response(
+                {"error": "You cannot approve your own survey"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
         # ❌ Wrong status order
         if survey.status != required_status:
             return Response(
@@ -706,10 +742,11 @@ class SurveyApprovalAPI(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # ❌ Same role double approval block
+        # ❌ Already approved
         if SurveyApproval.objects.filter(
             survey=survey,
-            approval_level=level
+            approval_level=level,
+            decision="APPROVED"
         ).exists():
             return Response(
                 {"error": "Already approved at this level"},
@@ -725,7 +762,7 @@ class SurveyApprovalAPI(APIView):
             remarks=remarks
         )
 
-        # ✅ Update survey status
+        # ✅ Update status
         survey.status = next_status if decision == "APPROVED" else "REJECTED"
         survey.save(update_fields=["status"])
 
@@ -736,6 +773,7 @@ class SurveyApprovalAPI(APIView):
             },
             status=status.HTTP_200_OK
         )
+
      
 #Pending Survey List      
 class PendingSurveyAPI(APIView):
@@ -897,4 +935,159 @@ class SurveyMapDataAPI(APIView):
 
 
 
-#Approve / Reject
+
+class RinexUploadAPI(APIView):
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+
+    # ✅ CREATE
+    def post(self, request):
+
+        if "file" not in request.FILES:
+            return Response(
+                {"error": "No file uploaded"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        uploaded_file = request.FILES["file"]
+
+        # Duplicate check (same user + same filename)
+        if RinexFile.objects.filter(
+            uploaded_by=request.user,
+            file__endswith=uploaded_file.name
+        ).exists():
+            return Response(
+                {"message": "This file already exists"},
+                status=status.HTTP_200_OK
+            )
+
+        serializer = RinexFileSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        rinex = serializer.save(uploaded_by=request.user)
+
+        return Response(
+            {
+                "message": "RINEX file uploaded successfully",
+                "rinex_id": rinex.id
+            },
+            status=status.HTTP_201_CREATED
+        )
+
+    # ✅ GET (ALL or SINGLE)
+    def get(self, request, file_id=None):
+
+        if file_id:
+            rinex = get_object_or_404(
+                RinexFile,
+                id=file_id,
+                uploaded_by=request.user
+            )
+            serializer = RinexFileSerializer(rinex)
+            return Response(serializer.data)
+
+        files = RinexFile.objects.filter(uploaded_by=request.user)
+        serializer = RinexFileSerializer(files, many=True)
+        return Response(serializer.data)
+
+    # ✅ UPDATE (Replace file)
+    def put(self, request, file_id):
+
+        rinex = get_object_or_404(
+            RinexFile,
+            id=file_id,
+            uploaded_by=request.user
+        )
+
+        if "file" not in request.FILES:
+            return Response(
+                {"error": "No file uploaded"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Delete old file from storage
+        if rinex.file:
+            rinex.file.delete()
+
+        serializer = RinexFileSerializer(
+            rinex,
+            data=request.data,
+            partial=True
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        return Response(
+            {
+                "message": "RINEX file updated successfully",
+                "rinex_id": rinex.id
+            },
+            status=status.HTTP_200_OK
+        )
+
+    # ✅ DELETE
+    def delete(self, request, file_id):
+
+        rinex = get_object_or_404(
+            RinexFile,
+            id=file_id,
+            uploaded_by=request.user
+        )
+
+        # Delete physical file
+        if rinex.file:
+            rinex.file.delete()
+
+        rinex.delete()
+
+        return Response(
+            {"message": "RINEX file deleted successfully"},
+            status=status.HTTP_204_NO_CONTENT
+        )
+
+
+
+
+# 🔹 Role Flow Mapping
+from django.db.models import Prefetch
+ROLE_FLOW = {
+    "SUPERVISOR": "SURVEYOR",
+    "DIRECTOR": "SUPERVISOR",
+    "ZONAL_CHIEF": "DIRECTOR",
+    "GNRB": "ZONAL_CHIEF",
+}
+
+
+class HierarchySiteSubSiteAPI(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+
+        current_user = request.user
+        current_role = current_user.role
+
+        # ❌ Surveyor & Admin not allowed
+        if current_role not in ROLE_FLOW:
+            return Response(
+                {"error": "You are not allowed to view this data"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # 🔹 Find target role
+        target_role = ROLE_FLOW[current_role]
+
+        # 🔹 Get lower level users (same zone)
+        lower_users = User.objects.filter(
+            role=target_role,
+            zone=current_user.zone
+        )
+
+        # 🔹 Get their surveys with subsites
+        surveys = Survey.objects.filter(
+            surveyor__in=lower_users
+        ).prefetch_related(
+            Prefetch("subsites")
+        ).order_by("-created_at")
+
+        serializer = SiteWithSubSiteSerializer(surveys, many=True)
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
