@@ -76,5 +76,5 @@ urlpatterns = [
   
     path("rinex/upload/", RinexUploadAPI.as_view(), name="rinex-upload"),
     path("rinex/upload/<uuid:file_id>/", RinexUploadAPI.as_view(), name="rinex-delete"),
-     path("hierarchy/sites/", HierarchySiteSubSiteAPI.as_view(), name="hierarchy-sites"),
+    path("hierarchy/sites/", HierarchySurveyAPI.as_view(), name="hierarchy-sites"),
 ]

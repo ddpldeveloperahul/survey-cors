@@ -470,9 +470,69 @@ class SurveyMonumentAPI(APIView):
         return Response({"message": "Monument deleted successfully"}, status=204)
 
 #Survey Sky Visibility
+# class SurveySkyVisibilityAPI(APIView):
+#     permission_classes = [IsAuthenticated]
+#     parser_classes = [MultiPartParser, FormParser]
+
+#     # CREATE
+#     def post(self, request, subsite_id):
+#         subsite = get_object_or_404(SurveySubSite, id=subsite_id)
+
+#         if hasattr(subsite, "surveyskyvisibility"):
+#             return Response(
+#                 {"error": "Sky Visibility already exists"},
+#                 status=status.HTTP_400_BAD_REQUEST
+#             )
+
+#         serializer = SurveySkyVisibilitySerializer(data=request.data)
+#         serializer.is_valid(raise_exception=True)
+#         sky = serializer.save(survey=subsite)
+
+#         return Response(serializer.data, status=status.HTTP_201_CREATED)
+        
+
+#     # READ
+#     def get(self, request, subsite_id):
+#         sky = get_object_or_404(
+#             SurveySkyVisibility,
+#             survey_id=subsite_id
+#         )
+#         serializer = SurveySkyVisibilitySerializer(sky)
+#         return Response(serializer.data)
+
+#     # UPDATE
+#     def put(self, request, subsite_id):
+#         sky = get_object_or_404(
+#             SurveySkyVisibility,
+#             survey_id=subsite_id
+#         )
+
+#         serializer = SurveySkyVisibilitySerializer(
+#             sky,
+#             data=request.data,
+#             partial=True
+#         )
+#         serializer.is_valid(raise_exception=True)
+#         serializer.save()
+
+#         return Response(serializer.data)
+
+#     # DELETE
+#     def delete(self, request, subsite_id):
+#         sky = get_object_or_404(
+#             SurveySkyVisibility,
+#             survey_id=subsite_id
+#         )
+#         sky.delete()
+
+#         return Response(
+#             {"message": "Deleted successfully"},
+#             status=status.HTTP_204_NO_CONTENT
+    # )
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser  
 class SurveySkyVisibilityAPI(APIView):
     permission_classes = [IsAuthenticated]
-    parser_classes = [MultiPartParser, FormParser]
+    parser_classes = [MultiPartParser, FormParser,JSONParser]
 
     # CREATE
     def post(self, request, subsite_id):
@@ -489,7 +549,6 @@ class SurveySkyVisibilityAPI(APIView):
         sky = serializer.save(survey=subsite)
 
         return Response(serializer.data, status=status.HTTP_201_CREATED)
-        
 
     # READ
     def get(self, request, subsite_id):
@@ -529,59 +588,133 @@ class SurveySkyVisibilityAPI(APIView):
             {"message": "Deleted successfully"},
             status=status.HTTP_204_NO_CONTENT
         )
+
 #ADD POWER DETAILS
+# class SurveyPowerAPI(APIView):
+#     permission_classes = [IsAuthenticated]
+#     # def post(self, request, subsite_id=None):
+#     #     serializer = SurveyPowerSerializer(data=request.data)
+#     #     if serializer.is_valid(raise_exception=True):
+#     #         serializer.is_valid(raise_exception=True)
+#     #         subsite = get_object_or_404(SurveySubSite, id=subsite_id)
+#     #         serializer.save(survey=subsite)
+#     #         return Response({"message": "Power Details created successfully", "power_id": serializer.data['id']}, status=201)
+#     #     else:
+#     #         return Response(serializer.errors, status=400)
+#     def post(self, request, subsite_id=None):
+
+#         subsite = get_object_or_404(SurveySubSite, id=subsite_id)
+
+#         # ✅ CHECK: Power details already exist
+#         if hasattr(subsite, "surveypower"):
+#             return Response(
+#                 {
+#                     "message": "Power details already exist for this subsite",
+#                     "power_id": subsite.surveypower.id
+#                 },
+#                 status=status.HTTP_200_OK
+#             )
+
+#         serializer = SurveyPowerSerializer(data=request.data)
+#         serializer.is_valid(raise_exception=True)
+#         serializer.save(survey=subsite)
+
+#         return Response(
+#             {
+#                 "message": "Power details created successfully",
+#                 "power_id": serializer.data["id"]
+#             },
+#             status=status.HTTP_201_CREATED
+#         )
+#     def get(self, request, subsite_id=None):
+#         powers = SurveyPower.objects.filter(survey_id=subsite_id)
+#         serializer = SurveyPowerSerializer(powers, many=True)
+#         return Response(serializer.data)
+#     def put(self, request, subsite_id=None):
+#         power = get_object_or_404(SurveyPower, survey_id=subsite_id)
+#         serializer = SurveyPowerSerializer(power, data=request.data, partial=True)
+#         if serializer.is_valid(raise_exception=True):
+#             serializer.save()
+#             return Response(serializer.data)
+#         else:
+#             return Response(serializer.errors, status=400)
+#     def delete(self, request, subsite_id=None):
+#         power = get_object_or_404(SurveyPower, survey_id=subsite_id)
+#         power.delete()
+#         return Response({"message": "Power Details deleted successfully"}, status=204)
 class SurveyPowerAPI(APIView):
+
     permission_classes = [IsAuthenticated]
-    # def post(self, request, subsite_id=None):
-    #     serializer = SurveyPowerSerializer(data=request.data)
-    #     if serializer.is_valid(raise_exception=True):
-    #         serializer.is_valid(raise_exception=True)
-    #         subsite = get_object_or_404(SurveySubSite, id=subsite_id)
-    #         serializer.save(survey=subsite)
-    #         return Response({"message": "Power Details created successfully", "power_id": serializer.data['id']}, status=201)
-    #     else:
-    #         return Response(serializer.errors, status=400)
-    def post(self, request, subsite_id=None):
+
+    # CREATE
+    def post(self, request, subsite_id):
 
         subsite = get_object_or_404(SurveySubSite, id=subsite_id)
 
-        # ✅ CHECK: Power details already exist
         if hasattr(subsite, "surveypower"):
             return Response(
                 {
-                    "message": "Power details already exist for this subsite",
+                    "message": "Power details already exist",
                     "power_id": subsite.surveypower.id
                 },
-                status=status.HTTP_200_OK
+                status=status.HTTP_400_BAD_REQUEST
             )
 
         serializer = SurveyPowerSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        serializer.save(survey=subsite)
+        power = serializer.save(survey=subsite)
 
         return Response(
             {
                 "message": "Power details created successfully",
-                "power_id": serializer.data["id"]
+                "data": serializer.data
             },
             status=status.HTTP_201_CREATED
         )
-    def get(self, request, subsite_id=None):
-        powers = SurveyPower.objects.filter(survey_id=subsite_id)
-        serializer = SurveyPowerSerializer(powers, many=True)
+
+    # READ
+    def get(self, request, subsite_id):
+
+        power = get_object_or_404(
+            SurveyPower,
+            survey_id=subsite_id
+        )
+
+        serializer = SurveyPowerSerializer(power)
         return Response(serializer.data)
-    def put(self, request, subsite_id=None):
-        power = get_object_or_404(SurveyPower, survey_id=subsite_id)
-        serializer = SurveyPowerSerializer(power, data=request.data, partial=True)
-        if serializer.is_valid(raise_exception=True):
-            serializer.save()
-            return Response(serializer.data)
-        else:
-            return Response(serializer.errors, status=400)
-    def delete(self, request, subsite_id=None):
-        power = get_object_or_404(SurveyPower, survey_id=subsite_id)
+
+    # UPDATE
+    def put(self, request, subsite_id):
+
+        power = get_object_or_404(
+            SurveyPower,
+            survey_id=subsite_id
+        )
+
+        serializer = SurveyPowerSerializer(
+            power,
+            data=request.data,
+            partial=True
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        return Response(serializer.data)
+
+    # DELETE
+    def delete(self, request, subsite_id):
+
+        power = get_object_or_404(
+            SurveyPower,
+            survey_id=subsite_id
+        )
+
         power.delete()
-        return Response({"message": "Power Details deleted successfully"}, status=204)
+
+        return Response(
+            {"message": "Power Details deleted successfully"},
+            status=status.HTTP_204_NO_CONTENT
+        )
 
 #ADD CONNECTIVITY
 class SurveyConnectivityAPI(APIView):
@@ -1048,46 +1181,155 @@ class RinexUploadAPI(APIView):
 
 
 # 🔹 Role Flow Mapping
-from django.db.models import Prefetch
-ROLE_FLOW = {
-    "SUPERVISOR": "SURVEYOR",
-    "DIRECTOR": "SUPERVISOR",
-    "ZONAL_CHIEF": "DIRECTOR",
-    "GNRB": "ZONAL_CHIEF",
-}
+# ROLE_FLOW = {
+#     "SUPERVISOR": "SURVEYOR",
+#     "DIRECTOR": "SUPERVISOR",
+#     "ZONAL_CHIEF": "DIRECTOR",
+#     "GNRB": "ZONAL_CHIEF",
+# }
 
 
-class HierarchySiteSubSiteAPI(APIView):
+# class HierarchySiteSubSiteAPI(APIView):
+#     permission_classes = [IsAuthenticated]
+
+#     def get(self, request):
+
+#         current_user = request.user
+#         current_role = current_user.role
+
+#         # ❌ Only hierarchy roles allowed
+#         if current_role not in ROLE_FLOW:
+#             return Response(
+#                 {"error": "You are not allowed to view this data"},
+#                 status=status.HTTP_403_FORBIDDEN
+#             )
+
+#         # 🔹 Find which role data should be visible
+#         target_role = ROLE_FLOW[current_role]
+
+#         # 🔹 Get lower role users (same zone)
+#         lower_users = User.objects.filter(
+#             role=target_role,
+#             zone=current_user.zone
+#         )
+
+#         # 🔹 Get their surveys with subsites
+#         surveys = Survey.objects.filter(
+#             surveyor__in=lower_users
+#         ).select_related("surveyor").prefetch_related("subsites").order_by("-created_at")
+
+#         serializer = HierarchySurveySerializer(surveys, many=True)
+#         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+
+# views.py
+
+# from .serializers import FullHierarchySurveySerializer
+
+
+# class HierarchySurveyAPI(APIView):
+#     permission_classes = [IsAuthenticated]
+
+#     ROLE_FLOW = {
+#         "SUPERVISOR": "SURVEYOR",
+#         "DIRECTOR": "SUPERVISOR",
+#         "ZONAL_CHIEF": "DIRECTOR",
+#         "GNRB": "ZONAL_CHIEF",
+#     }
+
+#     def get(self, request):
+
+#         user = request.user
+#         role = user.role
+
+#         if role not in self.ROLE_FLOW:
+#             return Response(
+#                 {"error": "You are not allowed"},
+#                 status=status.HTTP_403_FORBIDDEN
+#             )
+
+#         target_role = self.ROLE_FLOW[role]
+
+#         # 🔹 Direct lower role users
+#         lower_users = User.objects.filter(
+#             role=target_role,
+#             zone=user.zone
+#         )
+
+#         # 🔹 Their surveys
+#         surveys = Survey.objects.filter(
+#             surveyor__in=lower_users
+#         ).select_related("surveyor").prefetch_related(
+#             "subsites__surveylocation",
+#             "subsites__surveymonument",
+#             "subsites__surveyskyvisibility",
+#             "subsites__surveypower",
+#             "subsites__surveyconnectivity",
+#             "subsites__photos",
+#         ).order_by("-created_at")
+
+#         serializer = FullHierarchySurveySerializer(surveys, many=True)
+#         return Response(serializer.data)
+
+
+class HierarchySurveyAPI(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
 
-        current_user = request.user
-        current_role = current_user.role
+        user = request.user
+        role = user.role
+        zone = user.zone
 
-        # ❌ Surveyor & Admin not allowed
-        if current_role not in ROLE_FLOW:
+        # 🔹 SURVEYOR → Only his own data
+        if role == "SURVEYOR":
+            surveys = Survey.objects.filter(
+                surveyor=user
+            )
+
+        # 🔹 SUPERVISOR → Surveyor SUBMITTED data
+        elif role == "SUPERVISOR":
+            surveys = Survey.objects.filter(
+                surveyor__zone=zone,
+                status="SUBMITTED"
+            )
+
+        # 🔹 DIRECTOR → Supervisor Approved data
+        elif role == "DIRECTOR":
+            surveys = Survey.objects.filter(
+                surveyor__zone=zone,
+                status="SUPERVISOR_APPROVED"
+            )
+
+        # 🔹 ZONAL CHIEF → Director Approved data
+        elif role == "ZONAL_CHIEF":
+            surveys = Survey.objects.filter(
+                surveyor__zone=zone,
+                status="DIRECTOR_APPROVED"
+            )
+
+        # 🔹 GNRB → Zonal Chief Approved data
+        elif role == "GNRB":
+            surveys = Survey.objects.filter(
+                surveyor__zone=zone,
+                status="ZONAL_CHIEF_APPROVED"
+            )
+
+        else:
             return Response(
-                {"error": "You are not allowed to view this data"},
+                {"error": "You are not allowed"},
                 status=status.HTTP_403_FORBIDDEN
             )
 
-        # 🔹 Find target role
-        target_role = ROLE_FLOW[current_role]
-
-        # 🔹 Get lower level users (same zone)
-        lower_users = User.objects.filter(
-            role=target_role,
-            zone=current_user.zone
-        )
-
-        # 🔹 Get their surveys with subsites
-        surveys = Survey.objects.filter(
-            surveyor__in=lower_users
-        ).prefetch_related(
-            Prefetch("subsites")
+        surveys = surveys.select_related("surveyor").prefetch_related(
+            "subsites__surveylocation",
+            "subsites__surveymonument",
+            "subsites__surveyskyvisibility",
+            "subsites__surveypower",
+            "subsites__surveyconnectivity",
+            "subsites__photos",
         ).order_by("-created_at")
 
-        serializer = SiteWithSubSiteSerializer(surveys, many=True)
-
+        serializer = FullHierarchySurveySerializer(surveys, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)

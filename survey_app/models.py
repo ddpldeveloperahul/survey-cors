@@ -150,17 +150,105 @@ class SurveyLocation(models.Model):
     def __str__(self):
         return f"Location for {self.survey.subsite_name}"
 
-class SurveyMonument(models.Model):
-    MONUMENT_TYPE = [("GROUND", "Ground"), ("ROOFTOP", "Rooftop")]
 
-    survey = models.OneToOneField(SurveySubSite, on_delete=models.CASCADE)
-    monument_type = models.CharField(max_length=10, choices=MONUMENT_TYPE)
-    building_stories = models.IntegerField(null=True, blank=True)
-    accessibility = models.TextField()
-    surroundings = models.TextField()
+
+# class SurveyMonument(models.Model):
+#     MONUMENT_TYPE = [("GROUND", "Ground"), ("ROOFTOP", "Rooftop")]
+
+#     survey = models.OneToOneField(SurveySubSite, on_delete=models.CASCADE)
+#     monument_type = models.CharField(max_length=10, choices=MONUMENT_TYPE)
+#     building_stories = models.IntegerField(null=True, blank=True)
+#     accessibility = models.TextField()
+#     surroundings = models.TextField()
     
-    def  __str__(self):
+#     def  __str__(self):
+#         return f"Monument for {self.survey.subsite_name}"
+
+
+class SurveyMonument(models.Model):
+
+    MONUMENT_TYPE = [
+        ("GROUND", "Ground"),
+        ("ROOFTOP", "Rooftop"),
+    ]
+
+    BUILDING_STORIES = [
+        ("SINGLE", "Single Story"),
+        ("DOUBLE", "Double Story"),
+        ("TRIPLE", "Triple Story"),
+    ]
+
+    CHECKBOX_CHOICES = [
+        "Site Properly Accessible",
+        "Site is clean and free from litter",
+        "Site NOT in low-lying areas or flood area",
+    ]
+
+    survey = models.OneToOneField(
+        SurveySubSite,
+        on_delete=models.CASCADE,
+        related_name="surveymonument"
+    )
+
+    monument_type = models.CharField(
+        max_length=10,
+        choices=MONUMENT_TYPE
+    )
+
+    # Only required if Rooftop
+    building_stories = models.CharField(
+        max_length=10,
+        choices=BUILDING_STORIES,
+        blank=True,
+        null=True
+    )
+
+    # Checkbox list
+    site_conditions = models.JSONField(
+        default=list,
+        blank=True
+    )
+
+    def __str__(self):
         return f"Monument for {self.survey.subsite_name}"
+
+
+# EMI_SOURCE_CHOICES = [
+#     "HT Powerline",
+#     "Distribution Powerline",
+#     "Transformer",
+#     "Mobile Tower",
+#     "Other Radio Transmitter",
+#     "Electric Grid Station",
+#     "Water body",
+#     "Glazed window or Surface",
+#     "Others",
+# ]
+
+
+# class SurveySkyVisibility(models.Model):
+#     survey = models.OneToOneField(
+#         "SurveySubSite",
+#         on_delete=models.CASCADE,
+#         related_name="surveyskyvisibility"
+#     )
+
+#     polar_chart_image = models.ImageField(
+#         upload_to="sky_visibility/",
+#         null=True,
+#         blank=True
+#     )
+
+#     # List of EMI objects
+#     multipath_emi_source = models.JSONField(
+#         default=list,
+#         blank=True
+#     )
+
+#     remarks = models.TextField(blank=True)
+
+#     def __str__(self):
+#         return f"Sky Visibility for {self.survey.subsite_name}"
 
 EMI_SOURCE_CHOICES = [
     "HT Powerline",
@@ -172,6 +260,17 @@ EMI_SOURCE_CHOICES = [
     "Water body",
     "Glazed window or Surface",
     "Others",
+]
+
+DIRECTION_CHOICES = [
+    "North",
+    "Northeast",
+    "East",
+    "Southeast",
+    "South",
+    "Southwest",
+    "West",
+    "Northwest",
 ]
 
 
@@ -188,7 +287,14 @@ class SurveySkyVisibility(models.Model):
         blank=True
     )
 
-    # List of EMI objects
+    # Each item example:
+    # [
+    #   {
+    #     "source": "HT Powerline",
+    #     "direction": "North",
+    #     "approx_distance_m": 200
+    #   }
+    # ]
     multipath_emi_source = models.JSONField(
         default=list,
         blank=True
@@ -200,14 +306,42 @@ class SurveySkyVisibility(models.Model):
         return f"Sky Visibility for {self.survey.subsite_name}"
 
 
-class SurveyPower(models.Model):
-    survey = models.OneToOneField(SurveySubSite, on_delete=models.CASCADE)
-    ac_grid = models.BooleanField()
-    solar_possible = models.BooleanField()
-    sun_hours = models.IntegerField()
+
+# class SurveyPower(models.Model):
+#     survey = models.OneToOneField(SurveySubSite, on_delete=models.CASCADE)
+#     ac_grid = models.BooleanField()
+#     solar_possible = models.BooleanField()
+#     sun_hours = models.IntegerField()
     
+#     def __str__(self):
+#         return f"Power Details for {self.survey.subsite_name}"
+
+class SurveyPower(models.Model):
+
+    survey = models.OneToOneField(
+        SurveySubSite,
+        on_delete=models.CASCADE,
+        related_name="surveypower"
+    )
+
+    ac_grid = models.BooleanField()
+
+    # ✅ NEW FIELD
+    ac_grid_distance_meter = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text="Distance of nearest AC power connection in meters"
+    )
+
+    solar_possible = models.BooleanField()
+
+    solar_exposure_hours = models.IntegerField()
+
     def __str__(self):
         return f"Power Details for {self.survey.subsite_name}"
+
+
+
     
 PROVIDER_CHOICES = [
     "Airtel",

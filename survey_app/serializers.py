@@ -85,36 +85,6 @@ class SurveySubSiteSerializer(serializers.ModelSerializer):
 
 # serializers.py
 
-from rest_framework import serializers
-from .models import Survey, SurveySubSite
-
-
-# 🔹 Subsite Serializer
-class SubSiteSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = SurveySubSite
-        fields = [
-            "id",
-            "subsite_name",
-            "priority",
-            "created_at",
-        ]
-
-
-# 🔹 Site + Subsite Serializer
-class SiteWithSubSiteSerializer(serializers.ModelSerializer):
-    subsites = SubSiteSerializer(many=True)
-
-    class Meta:
-        model = Survey
-        fields = [
-            "id",
-            "site_name",
-            "status",
-            "created_at",
-            "subsites",
-        ]
-
 
 
 class SurveyLocationSerializer(serializers.ModelSerializer):
@@ -124,11 +94,58 @@ class SurveyLocationSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "created_at"]
 
 
+# class SurveyMonumentSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = SurveyMonument
+#         fields = ["id", "monument_type", "building_stories", "accessibility", "surroundings"]
+#         read_only_fields = ["id", "created_at"]
+
+
+
 class SurveyMonumentSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = SurveyMonument
-        fields = ["id", "monument_type", "building_stories", "accessibility", "surroundings"]
-        read_only_fields = ["id", "created_at"]
+        fields = [
+            "id",
+            "monument_type",
+            "building_stories",
+            "site_conditions",
+        ]
+        read_only_fields = ["id"]
+
+    def validate(self, data):
+
+        monument_type = data.get("monument_type")
+        building_stories = data.get("building_stories")
+
+        # Rooftop → building_stories required
+        if monument_type == "ROOFTOP" and not building_stories:
+            raise serializers.ValidationError({
+                "building_stories": "Building stories required for Rooftop"
+            })
+
+        # Ground → building_stories should be empty
+        if monument_type == "GROUND":
+            data["building_stories"] = None
+
+        # Validate checkboxes
+        allowed = [
+            "Site Properly Accessible",
+            "Site is clean and free from litter",
+            "Site NOT in low-lying areas or flood area",
+        ]
+
+        conditions = data.get("site_conditions", [])
+
+        invalid = [c for c in conditions if c not in allowed]
+        if invalid:
+            raise serializers.ValidationError({
+                "site_conditions": f"Invalid value(s): {invalid}"
+            })
+
+        return data
+
 
 # class SurveySkyVisibilitySerializer(serializers.ModelSerializer):
 #     class Meta:
@@ -136,7 +153,70 @@ class SurveyMonumentSerializer(serializers.ModelSerializer):
 #         fields = ["id", "obstruction_data", "multipath_risk", "emi_sources"]
 #         read_only_fields = ["id", "created_at"]
 
+# class SurveySkyVisibilitySerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = SurveySkyVisibility
+#         fields = [
+#             "id",
+#             "polar_chart_image",
+#             "multipath_emi_source",
+#             "remarks",
+#         ]
+#         read_only_fields = ["id"]
+
+#     def validate(self, data):
+
+#         emi_list = data.get("multipath_emi_source", [])
+
+#         if not emi_list:
+#             raise serializers.ValidationError({
+#                 "multipath_emi_source": "At least one EMI source required"
+#             })
+
+#         for item in emi_list:
+
+#             if not isinstance(item, dict):
+#                 raise serializers.ValidationError(
+#                     "Each EMI entry must be an object"
+#                 )
+
+#             source = item.get("source")
+#             direction = item.get("direction")
+#             distance = item.get("distance")
+
+#             # Validate source
+#             if source not in EMI_SOURCE_CHOICES:
+#                 raise serializers.ValidationError(
+#                     f"Invalid EMI source: {source}"
+#                 )
+
+#             # Validate direction
+#             if direction is None:
+#                 raise serializers.ValidationError(
+#                     f"Direction required for {source}"
+#                 )
+
+#             if not (0 <= int(direction) <= 360):
+#                 raise serializers.ValidationError(
+#                     f"Direction must be between 0-360 for {source}"
+#                 )
+
+#             # Validate distance
+#             if not distance:
+#                 raise serializers.ValidationError(
+#                     f"Distance required for {source}"
+#                 )
+
+#             # If Others → require other_text
+#             if source == "Others" and not item.get("other_text"):
+#                 raise serializers.ValidationError(
+#                     "Provide other_text when source is Others"
+#                 )
+
+#         return data
+
 class SurveySkyVisibilitySerializer(serializers.ModelSerializer):
+
     class Meta:
         model = SurveySkyVisibility
         fields = [
@@ -165,45 +245,81 @@ class SurveySkyVisibilitySerializer(serializers.ModelSerializer):
 
             source = item.get("source")
             direction = item.get("direction")
-            distance = item.get("distance")
+            distance = item.get("approx_distance_m")
 
-            # Validate source
+            # ✅ Validate Source
             if source not in EMI_SOURCE_CHOICES:
                 raise serializers.ValidationError(
                     f"Invalid EMI source: {source}"
                 )
 
-            # Validate direction
-            if direction is None:
+            # ✅ Validate Direction (Dropdown)
+            if direction not in DIRECTION_CHOICES:
                 raise serializers.ValidationError(
-                    f"Direction required for {source}"
+                    f"Direction must be one of {DIRECTION_CHOICES}"
                 )
 
-            if not (0 <= int(direction) <= 360):
+            # ✅ Validate Distance
+            if distance is None:
                 raise serializers.ValidationError(
-                    f"Direction must be between 0-360 for {source}"
+                    f"Approx. Distance required for {source}"
                 )
 
-            # Validate distance
-            if not distance:
+            if not isinstance(distance, int) or distance <= 0:
                 raise serializers.ValidationError(
-                    f"Distance required for {source}"
+                    f"Approx. Distance must be positive integer for {source}"
                 )
 
-            # If Others → require other_text
-            if source == "Others" and not item.get("other_text"):
-                raise serializers.ValidationError(
-                    "Provide other_text when source is Others"
-                )
+            # ✅ If Others → require other_text
+            if source == "Others":
+                if not item.get("other_text"):
+                    raise serializers.ValidationError(
+                        "Provide other_text when source is Others"
+                    )
 
         return data
 
 
+# class SurveyPowerSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = SurveyPower
+#         fields = ["id", "ac_grid", "solar_possible", "sun_hours"]
+#         read_only_fields = ["id", "created_at"]
+
+
 class SurveyPowerSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = SurveyPower
-        fields = ["id", "ac_grid", "solar_possible", "sun_hours"]
-        read_only_fields = ["id", "created_at"]
+        fields = [
+            "id",
+            "ac_grid",
+            "ac_grid_distance_meter",   # ✅ new field
+            "solar_possible",
+            "solar_exposure_hours"
+        ]
+        read_only_fields = ["id"]
+
+    def validate(self, data):
+
+        ac_grid = data.get("ac_grid")
+        distance = data.get("ac_grid_distance_meter")
+
+        # If AC grid available → distance required
+        if ac_grid:
+            if distance is None:
+                raise serializers.ValidationError({
+                    "ac_grid_distance_meter": "Distance required when AC grid is available"
+                })
+
+            if int(distance) <= 0:
+                raise serializers.ValidationError({
+                    "ac_grid_distance_meter": "Distance must be greater than 0"
+                })
+
+        return data
+
+
 
 # class SurveyConnectivitySerializer(serializers.ModelSerializer):
 #     class Meta:
@@ -317,3 +433,69 @@ class RinexFileSerializer(serializers.ModelSerializer):
                 "Only RINEX files (.obs, .nav, .rnx) are allowed"
             )
         return value
+
+
+
+from rest_framework import serializers
+from .models import Survey, SurveySubSite
+
+
+# 🔹 Subsite Serializer
+# class SubSiteSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = SurveySubSite
+#         fields = [
+#             "id",
+#             "subsite_name",
+#             "priority",
+#             "created_at"
+#         ]
+
+
+# serializers.py
+
+
+
+class FullSubSiteSerializer(serializers.ModelSerializer):
+
+    location = SurveyLocationSerializer(source="surveylocation", read_only=True)
+    monument = SurveyMonumentSerializer(source="surveymonument", read_only=True)
+    sky_visibility = SurveySkyVisibilitySerializer(source="surveyskyvisibility", read_only=True)
+    power = SurveyPowerSerializer(source="surveypower", read_only=True)
+    connectivity = SurveyConnectivitySerializer(source="surveyconnectivity", read_only=True)
+    photos = SurveyPhotoSerializer(read_only=True)
+
+    class Meta:
+        model = SurveySubSite
+        fields = [
+            "id",
+            "subsite_name",
+            "priority",
+            "created_at",
+            "location",
+            "monument",
+            "sky_visibility",
+            "power",
+            "connectivity",
+            "photos",
+        ]
+
+
+class FullHierarchySurveySerializer(serializers.ModelSerializer):
+
+    subsites = FullSubSiteSerializer(many=True)
+    surveyor_name = serializers.CharField(source="surveyor.name", read_only=True)
+    surveyor_username = serializers.CharField(source="surveyor.username", read_only=True)
+
+    class Meta:
+        model = Survey
+        fields = [
+            "id",
+            "site_name",
+            "status",
+            "remarks",
+            "created_at",
+            "surveyor_name",
+            "surveyor_username",
+            "subsites",
+        ]
