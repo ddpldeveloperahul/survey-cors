@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Create Survey</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+
+<body>
+
+    <div class="container mt-5">
+        <div class="card shadow p-4">
+            <h3 class="mb-4 text-center">Create Survey</h3>
+
+            <form method="post">
+                {% csrf_token %}
+
+                <!-- State -->
+                <div class="mb-3">
+                    <label class="form-label">State</label>
+                    <select name="state" id="id_state" class="form-control">
+                        <option value="">Select State</option>
+                        {% for state in form.fields.state.queryset %}
+                        <option value="{{ state.id }}">{{ state.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- District -->
+                <div class="mb-3">
+                    <label class="form-label">District</label>
+                    <select name="district" id="id_district" class="form-control">
+                        <option value="">Select District</option>
+                    </select>
+                </div>
+
+                <!-- SubDistrict -->
+                <div class="mb-3">
+                    <label class="form-label">SubDistrict</label>
+                    <select name="subdistrict" id="id_subdistrict" class="form-control">
+                        <option value="">Select SubDistrict</option>
+                    </select>
+                </div>
+
+                <!-- Station -->
+                <div class="mb-3">
+                    <label class="form-label">Station (Town)</label>
+                    <select name="station" id="id_station" class="form-control">
+                        <option value="">Select Town</option>
+                    </select>
+                </div>
+
+                <!-- Remarks -->
+                <div class="mb-3">
+                    <label class="form-label">Remarks</label>
+                    <textarea name="remarks" class="form-control" rows="3"></textarea>
+                </div>
+
+                <button type="submit" class="btn btn-primary w-100">
+                    Submit Survey
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT SECTION -->
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+
+            const stateSelect = document.querySelector("[name='state']");
+            const districtSelect = document.querySelector("[name='district']");
+            const subdistrictSelect = document.querySelector("[name='subdistrict']");
+            const townSelect = document.querySelector("[name='station']");
+
+            stateSelect.addEventListener("change", function () {
+
+                districtSelect.innerHTML = '<option value="">Select District</option>';
+                subdistrictSelect.innerHTML = '<option value="">Select SubDistrict</option>';
+                townSelect.innerHTML = '<option value="">Select Town</option>';
+
+                if (this.value) {
+                    fetch(`/api/districts/${this.value}/`)
+                        .then(res => res.json())
+                        .then(data => {
+                            data.forEach(item => {
+                                districtSelect.innerHTML +=
+                                    `<option value="${item.id}">${item.name}</option>`;
+                            });
+                        })
+                        .catch(err => console.error(err));
+                }
+            });
+
+            districtSelect.addEventListener("change", function () {
+
+                subdistrictSelect.innerHTML = '<option value="">Select SubDistrict</option>';
+                townSelect.innerHTML = '<option value="">Select Town</option>';
+
+                if (this.value) {
+                    fetch(`/api/subdistricts/${this.value}/`)
+                        .then(res => res.json())
+                        .then(data => {
+                            data.forEach(item => {
+                                subdistrictSelect.innerHTML +=
+                                    `<option value="${item.id}">${item.name}</option>`;
+                            });
+                        });
+                }
+            });
+
+            subdistrictSelect.addEventListener("change", function () {
+
+                townSelect.innerHTML = '<option value="">Select Town</option>';
+
+                if (this.value) {
+                    fetch(`/api/towns/${this.value}/`)
+                        .then(res => res.json())
+                        .then(data => {
+                            data.forEach(item => {
+                                townSelect.innerHTML +=
+                                    `<option value="${item.id}">${item.name}</option>`;
+                            });
+                        });
+                }
+            });
+
+        });
+    </script>
+
+
+</body>
+
+</html>

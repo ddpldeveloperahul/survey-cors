@@ -20,7 +20,7 @@ class UserAdmin(admin.ModelAdmin):
 #     inlines = [SurveyPhotoInline]
 @admin.register(Survey)
 class SurveyAdmin(admin.ModelAdmin):
-    list_display = ("id", "site_name", "surveyor", "remarks","status")
+    list_display = ("id", "station", "surveyor", "remarks","status")
 
 # admin.site.register(SurveyPhoto)
 @admin.register(SurveyPhoto)
@@ -37,6 +37,10 @@ admin.site.register(SurveySkyVisibility)
 admin.site.register(SurveyPower)
 admin.site.register(SurveyConnectivity)
 # admin.site.register(SurveyApproval)
+admin.site.register(State)
+admin.site.register(District)   
+admin.site.register(SubDistrict)
+admin.site.register(Town)
 
 
 @admin.register(SurveyApproval)

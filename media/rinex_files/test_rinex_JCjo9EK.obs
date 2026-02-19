@@ -1,0 +1,17 @@
+     3.03           OBSERVATION DATA    M (MIXED)           RINEX VERSION / TYPE
+PythonDemo          ChatGPT             20240211 120000 UTC PGM / RUN BY / DATE 
+                                                            MARKER NAME
+                                                            MARKER NUMBER
+                                                            OBSERVER / AGENCY
+                                                            REC # / TYPE / VERS
+                                                            ANT # / TYPE
+  30.0000  78.0000  500.0000                  APPROX POSITION XYZ
+        0.0000        0.0000        0.0000     ANTENNA: DELTA H/E/N
+     1     C1C                                      SYS / # / OBS TYPES
+                                                            END OF HEADER
+> 2024 02 11 12 00 00.0000000  0  1
+  22654432.123
+> 2024 02 11 12 00 30.0000000  0  1
+  22654435.456
+> 2024 02 11 12 01 00.0000000  0  1
+  22654440.789

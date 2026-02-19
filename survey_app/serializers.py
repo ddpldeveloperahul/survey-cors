@@ -71,17 +71,79 @@ class SurveySerializer(serializers.ModelSerializer):
         fields = "__all__"
         read_only_fields = ("surveyor", "status")
         
+# class SurveySubSiteSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = SurveySubSite
+#         fields = [
+#             "id",
+#             "survey",        # ✅ ADD THIS
+#             "subsite_name",
+#             "priority",
+#             "created_at",
+#         ]
+#         read_only_fields = ["id", "survey", "created_at"]
+from rest_framework import serializers
+
+
 class SurveySubSiteSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = SurveySubSite
         fields = [
             "id",
-            "survey",        # ✅ ADD THIS
-            "subsite_name",
+            "survey",
+            "location",
             "priority",
+            "rinex_file",
             "created_at",
         ]
         read_only_fields = ["id", "survey", "created_at"]
+        extra_kwargs = {
+            "location": {"required": True},
+            "priority": {"required": True},
+        }
+
+    # ✅ RINEX FILE VALIDATION (Optional)
+    def validate_rinex_file(self, value):
+        if value and not value.name.lower().endswith(('.obs', '.nav', '.rnx')):
+            raise serializers.ValidationError(
+                "Only RINEX files (.obs, .nav, .rnx) are allowed"
+            )
+        return value
+
+    def validate(self, data):
+
+        survey = self.context.get("survey")
+        instance = getattr(self, "instance", None)
+
+        if not data.get("location"):
+            raise serializers.ValidationError({
+                "location": "This field is required."
+            })
+
+        # ✅ Duplicate Location Check
+        if SurveySubSite.objects.filter(
+            survey=survey,
+            location=data.get("location")
+        ).exclude(id=instance.id if instance else None).exists():
+            raise serializers.ValidationError({
+                "location": "Location already exists in this survey."
+            })
+
+        # ✅ Duplicate Priority Check
+        if SurveySubSite.objects.filter(
+            survey=survey,
+            priority=data.get("priority")
+        ).exclude(id=instance.id if instance else None).exists():
+            raise serializers.ValidationError({
+                "priority": "Priority already exists in this survey."
+            })
+
+        return data
+
+
+
+
 
 # serializers.py
 
@@ -245,7 +307,7 @@ class SurveySkyVisibilitySerializer(serializers.ModelSerializer):
 
             source = item.get("source")
             direction = item.get("direction")
-            distance = item.get("approx_distance_m")
+            distance = item.get("approx_distance_meter")
 
             # ✅ Validate Source
             if source not in EMI_SOURCE_CHOICES:
@@ -340,38 +402,42 @@ PROVIDER_CHOICES = [
 class SurveyConnectivitySerializer(serializers.ModelSerializer):
 
     def validate(self, data):
+
         fields = [
             ("gsm_4g", "others_gsm_4g"),
             ("broadband", "others_broadband"),
             ("fiber", "others_fiber"),
+            ("airfiber", "others_airfiber"),   # ✅ Added
         ]
 
-        # 🚫 EMPTY POST
         if not data:
             raise serializers.ValidationError({
-                "gsm_4g": ["This field is required"],
-                "broadband": ["This field is required"],
-                "fiber": ["This field is required"],
+                field: ["This field is required"]
+                for field, _ in fields
             })
 
-        # 🚫 AT LEAST ONE REQUIRED
-        if not any(data.get(f[0]) for f in fields):
-            errors = {}
-            for field, _ in fields:
-                errors[field] = ["Select at least one provider"]
-            raise serializers.ValidationError(errors)
+        # At least one provider required
+        if not any(data.get(field) for field, _ in fields):
+            raise serializers.ValidationError({
+                field: ["Select at least one provider"]
+                for field, _ in fields
+            })
 
         for field, other_field in fields:
+
             providers = data.get(field, [])
 
-            # Provider list validation
             if providers:
                 if not isinstance(providers, list):
                     raise serializers.ValidationError({
                         field: ["Must be a list"]
                     })
 
-                invalid = [p for p in providers if p not in PROVIDER_CHOICES]
+                invalid = [
+                    p for p in providers
+                    if p not in PROVIDER_CHOICES
+                ]
+
                 if invalid:
                     raise serializers.ValidationError({
                         field: [
@@ -380,7 +446,7 @@ class SurveyConnectivitySerializer(serializers.ModelSerializer):
                         ]
                     })
 
-            # 🚫 "Others" selected but text missing
+            # If Others selected → require free text
             if "Others" in providers and not data.get(other_field):
                 raise serializers.ValidationError({
                     other_field: [
@@ -400,9 +466,12 @@ class SurveyConnectivitySerializer(serializers.ModelSerializer):
             "others_broadband",
             "fiber",
             "others_fiber",
+            "airfiber",           # ✅ Added
+            "others_airfiber",    # ✅ Added
             "remarks",
         ]
         read_only_fields = ["id"]
+
 
 
 class SurveyPhotoSerializer(serializers.ModelSerializer):
@@ -499,3 +568,45 @@ class FullHierarchySurveySerializer(serializers.ModelSerializer):
             "surveyor_username",
             "subsites",
         ]
+
+
+
+from rest_framework import serializers
+from .models import State, District, SubDistrict, Town
+
+
+class TownSerializer(serializers.ModelSerializer):
+    name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Town
+        fields = ["id", "name"]
+
+    def get_name(self, obj):
+        if obj.sequence > 1:
+            return f"{obj.base_name} {obj.sequence}"
+        return obj.base_name
+
+
+class SubDistrictSerializer(serializers.ModelSerializer):
+    towns = TownSerializer(many=True)
+
+    class Meta:
+        model = SubDistrict
+        fields = ["id", "name", "towns"]
+
+
+class DistrictSerializer(serializers.ModelSerializer):
+    subdistricts = SubDistrictSerializer(many=True)
+
+    class Meta:
+        model = District
+        fields = ["id", "name", "subdistricts"]
+
+
+class StateSerializer(serializers.ModelSerializer):
+    districts = DistrictSerializer(many=True)
+
+    class Meta:
+        model = State
+        fields = ["id", "name", "latitude", "longitude", "districts"]

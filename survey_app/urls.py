@@ -77,4 +77,14 @@ urlpatterns = [
     path("rinex/upload/", RinexUploadAPI.as_view(), name="rinex-upload"),
     path("rinex/upload/<uuid:file_id>/", RinexUploadAPI.as_view(), name="rinex-delete"),
     path("hierarchy/sites/", HierarchySurveyAPI.as_view(), name="hierarchy-sites"),
+    
+    
+    path("surveyforms/", create_survey, name="survey-forms"),
+    path("states/", StateListAPI.as_view(), name="state-list"), 
+    path("states/<int:state_id>/", StateListAPI.as_view(), name="state-detail"),
+    path("districts/", DistrictByStateAPI.as_view(), name="district-list"), 
+    path("districts/<int:state_id>/", DistrictByStateAPI.as_view()),
+    path("subdistricts/<int:district_id>/", SubDistrictByDistrictAPI.as_view()),
+    path("towns/<int:subdistrict_id>/", TownBySubDistrictAPI.as_view()),
+    path("location/", LocationHierarchyAPI.as_view()),
 ]

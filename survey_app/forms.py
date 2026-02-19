@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth import authenticate
-from .models import User
+from .models import Survey, User
 
 
 # -------------------------
@@ -62,3 +62,87 @@ class UserLoginForm(forms.Form):
 
         cleaned_data["user"] = user
         return cleaned_data
+
+
+from django import forms
+from .models import Survey, District, SubDistrict, Town
+
+
+# class SurveyForm(forms.ModelForm):
+
+#     class Meta:
+#         model = Survey
+#         fields = [
+#             "state",
+#             "district",
+#             "subdistrict",
+#             "station",
+#             "remarks",
+#         ]
+
+#         widgets = {
+#             "state": forms.Select(attrs={"class": "form-control"}),
+#             "district": forms.Select(attrs={"class": "form-control"}),
+#             "subdistrict": forms.Select(attrs={"class": "form-control"}),
+#             "station": forms.Select(attrs={"class": "form-control"}),
+#             "remarks": forms.Textarea(attrs={
+#                 "class": "form-control",
+#                 "rows": 3
+#             }),
+#         }
+
+class SurveyForm(forms.ModelForm):
+
+    class Meta:
+        model = Survey
+        fields = [
+            "state",
+            "district",
+            "subdistrict",
+            "station",
+            "remarks",
+        ]
+
+        widgets = {
+            "state": forms.Select(attrs={"class": "form-control"}),
+            "district": forms.Select(attrs={"class": "form-control"}),
+            "subdistrict": forms.Select(attrs={"class": "form-control"}),
+            "station": forms.Select(attrs={"class": "form-control"}),
+            "remarks": forms.Textarea(attrs={
+                "class": "form-control",
+                "rows": 3
+            }),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # 🔹 Initially empty
+        self.fields["district"].queryset = District.objects.none()
+        self.fields["subdistrict"].queryset = SubDistrict.objects.none()
+        self.fields["station"].queryset = Town.objects.none()
+
+        # 🔹 If State Selected
+        if "state" in self.data:
+            try:
+                state_id = int(self.data.get("state"))
+                self.fields["district"].queryset = District.objects.filter(state_id=state_id)
+            except (ValueError, TypeError):
+                pass
+
+        # 🔹 If District Selected
+        if "district" in self.data:
+            try:
+                district_id = int(self.data.get("district"))
+                self.fields["subdistrict"].queryset = SubDistrict.objects.filter(district_id=district_id)
+            except (ValueError, TypeError):
+                pass
+
+        # 🔹 If SubDistrict Selected
+        if "subdistrict" in self.data:
+            try:
+                subdistrict_id = int(self.data.get("subdistrict"))
+                self.fields["station"].queryset = Town.objects.filter(subdistrict_id=subdistrict_id)
+            except (ValueError, TypeError):
+                pass
+
