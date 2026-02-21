@@ -79,12 +79,22 @@ urlpatterns = [
     path("hierarchy/sites/", HierarchySurveyAPI.as_view(), name="hierarchy-sites"),
     
     
-    path("surveyforms/", create_survey, name="survey-forms"),
+    # path("surveyforms/", create_survey, name="survey-forms"),
     path("states/", StateListAPI.as_view(), name="state-list"), 
     path("states/<int:state_id>/", StateListAPI.as_view(), name="state-detail"),
     path("districts/", DistrictByStateAPI.as_view(), name="district-list"), 
-    path("districts/<int:state_id>/", DistrictByStateAPI.as_view()),
-    path("subdistricts/<int:district_id>/", SubDistrictByDistrictAPI.as_view()),
-    path("towns/<int:subdistrict_id>/", TownBySubDistrictAPI.as_view()),
+    path("states/<int:state_id>/districts/", DistrictByStateAPI.as_view()),
+    path("districts/<int:district_id>/subdistricts/", SubDistrictByDistrictAPI.as_view()),
+    path("subdistricts/<int:subdistrict_id>/towns/", TownBySubDistrictAPI.as_view()),
     path("location/", LocationHierarchyAPI.as_view()),
+    
+    path("statesdb/", StatedbListAPI.as_view(), name="statedb"),
+    path("statesdb/<int:state_id>/", StatedbListAPI.as_view(), name="state-detail"),
+    path("statesdb/<int:state_id>/districtsdb/", DistrictdbByStateAPI.as_view(), name="districtsdb"),
+    path("districtsdb/<int:district_id>/stationdb/", StationdbByDistrictAPI.as_view(), name="stationdb"),
+    
+    
+    
+    
+    #
 ]

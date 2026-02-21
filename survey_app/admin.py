@@ -47,3 +47,6 @@ admin.site.register(Town)
 class SurveyApprovalAdmin(admin.ModelAdmin):
     list_display = ("id", "survey", "approval_level", "approved_by", "decision", "remarks", "approved_at")
 
+admin.site.register(Statedb)
+admin.site.register(Districtdb)
+admin.site.register(Stationdb)

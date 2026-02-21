@@ -1,0 +1,160 @@
+{
+  "site_name": "Collector Office Jaipur"
+}
+
+locations
+{
+  
+  "latitude": 26.9124,
+  "longitude": 75.7873,
+  "address": "Collectorate Campus",
+  "city": "Jaipur",
+  "district": "Jaipur",
+  "state": "Rajasthan"
+}
+
+monument
+{
+ 
+  "monument_type": "GROUND",
+  "accessibility": "Direct ground access",
+  "surroundings": "Open area"
+}
+
+
+
+{
+  "monument_type": "ROOFTOP",
+  "building_stories": "DOUBLE",
+  "site_conditions": [
+    "Site Properly Accessible",
+    "Site is clean and free from litter"
+  ]
+}
+{
+  "monument_type": "GROUND",
+  "site_conditions": [
+    "Site Properly Accessible"
+  ]
+}
+
+sky-Visibility
+
+EMI_SOURCE_CHOICES = [
+    "HT Powerline",
+    "Distribution Powerline",
+    "Transformer",
+    "Mobile Tower",
+    "Other Radio Transmitter",
+    "Electric Grid Station",
+    "Water body",
+    "Glazed window or Surface",
+    "Others",
+]
+
+[
+  {
+    "source": "HT Powerline",
+    "direction": "North",
+    "approx_distance_meter": 200
+  }
+
+]
+
+
+[
+  {
+    "source": "HT Powerline",
+    "direction": "North",
+    "approx_distance_meter": 200
+  },
+  {
+    "source": "Others",
+    "direction": "East",
+    "approx_distance_meter": 100,
+    "other_text": "Local Radio Tower"
+  }
+]
+
+power
+{
+  
+  "ac_grid": true,
+  "solar_possible": true,
+  "sun_hours": 8
+}
+
+{
+  "ac_grid": true,
+  "ac_grid_distance_meter": 100,
+  "solar_possible": true,
+  "solar_exposure_hours": 6
+}
+
+{
+  "gsm_4g": true,
+  "broadband": false,
+  "fiber": true,
+  "remarks": "Fiber available nearby"
+}
+
+
+
+PROVIDER_CHOICES = [
+    "Airtel",
+    "Vodafone Idea",
+    "JIO",
+    "BSNL",
+    "Others",
+]
+
+conctivity
+
+{
+  "gsm_4g": ["Airtel"],
+  "broadband": [],
+  "fiber": ["JIO"],
+  "airfiber": ["BSNL"],
+  "remarks": "Connectivity available"
+}
+
+{
+  "gsm_4g": ["Airtel", "Others"],
+  "others_gsm_4g": "Local Mobile Operator",
+  "broadband": ["BSNL"],
+  "fiber": ["Others"],
+  "others_fiber": "CityNet Fiber",
+  "remarks": "Connectivity verified on site"
+}
+{
+  "message": "Survey submitted"
+}
+
+#signup
+http://127.0.0.1:8000/api/signup/
+{
+    "username": "nakul",
+    "password": "123",
+    "name": "nakul",
+    "email": "nakul@gmail.com",
+    "mobile": "9876543210",
+    "role": "SUPERVISOR",
+    "zone": "NORTH"
+}
+login
+http://127.0.0.1:8000/api/login/
+{
+    "username": "nakul",
+    "password": 123
+}
+
+
+
+#POST /api/approve/<survey_id>/
+approve
+
+
+{
+    "decision": "APPROVED",
+    "remarks": "Looks good"
+}

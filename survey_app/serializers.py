@@ -32,8 +32,6 @@ class SignupSerializer(serializers.ModelSerializer):
 
         return user
     
-
-
 class LoginSerializer(serializers.Serializer):
     username = serializers.CharField()
     password = serializers.CharField(write_only=True)
@@ -47,8 +45,6 @@ class LoginSerializer(serializers.Serializer):
             raise serializers.ValidationError("Invalid username or password")
         data["user"] = user
         return data
-
-# serializers.py
 
 class UserListSerializer(serializers.ModelSerializer):
     class Meta:
@@ -64,27 +60,31 @@ class UserListSerializer(serializers.ModelSerializer):
             "created_at",
         ]
 
-
 class SurveySerializer(serializers.ModelSerializer):
+
+    state_name = serializers.CharField(source="state.name", read_only=True)
+    district_name = serializers.CharField(source="district.name", read_only=True)
+    subdistrict_name = serializers.CharField(source="subdistrict.name", read_only=True)
+    station_name = serializers.CharField(source="station.name", read_only=True)
+
     class Meta:
         model = Survey
-        fields = "__all__"
-        read_only_fields = ("surveyor", "status")
+        fields = [
+            "id",
+            "state",
+            "state_name",
+            "district",
+            "district_name",
+            "subdistrict",
+            "subdistrict_name",
+            "station",
+            "station_name",
+            "status",
+            "remarks",
+            "created_at",
+        ]
+        read_only_fields = ("surveyor", "status", "created_at")
         
-# class SurveySubSiteSerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = SurveySubSite
-#         fields = [
-#             "id",
-#             "survey",        # ✅ ADD THIS
-#             "subsite_name",
-#             "priority",
-#             "created_at",
-#         ]
-#         read_only_fields = ["id", "survey", "created_at"]
-from rest_framework import serializers
-
-
 class SurveySubSiteSerializer(serializers.ModelSerializer):
 
     class Meta:
@@ -141,28 +141,11 @@ class SurveySubSiteSerializer(serializers.ModelSerializer):
 
         return data
 
-
-
-
-
-# serializers.py
-
-
-
 class SurveyLocationSerializer(serializers.ModelSerializer):
     class Meta:
         model = SurveyLocation
         fields = ["id", "latitude", "longitude", "address", "city", "district", "state"]
         read_only_fields = ["id", "created_at"]
-
-
-# class SurveyMonumentSerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = SurveyMonument
-#         fields = ["id", "monument_type", "building_stories", "accessibility", "surroundings"]
-#         read_only_fields = ["id", "created_at"]
-
-
 
 class SurveyMonumentSerializer(serializers.ModelSerializer):
 
@@ -207,75 +190,6 @@ class SurveyMonumentSerializer(serializers.ModelSerializer):
             })
 
         return data
-
-
-# class SurveySkyVisibilitySerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = SurveySkyVisibility
-#         fields = ["id", "obstruction_data", "multipath_risk", "emi_sources"]
-#         read_only_fields = ["id", "created_at"]
-
-# class SurveySkyVisibilitySerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = SurveySkyVisibility
-#         fields = [
-#             "id",
-#             "polar_chart_image",
-#             "multipath_emi_source",
-#             "remarks",
-#         ]
-#         read_only_fields = ["id"]
-
-#     def validate(self, data):
-
-#         emi_list = data.get("multipath_emi_source", [])
-
-#         if not emi_list:
-#             raise serializers.ValidationError({
-#                 "multipath_emi_source": "At least one EMI source required"
-#             })
-
-#         for item in emi_list:
-
-#             if not isinstance(item, dict):
-#                 raise serializers.ValidationError(
-#                     "Each EMI entry must be an object"
-#                 )
-
-#             source = item.get("source")
-#             direction = item.get("direction")
-#             distance = item.get("distance")
-
-#             # Validate source
-#             if source not in EMI_SOURCE_CHOICES:
-#                 raise serializers.ValidationError(
-#                     f"Invalid EMI source: {source}"
-#                 )
-
-#             # Validate direction
-#             if direction is None:
-#                 raise serializers.ValidationError(
-#                     f"Direction required for {source}"
-#                 )
-
-#             if not (0 <= int(direction) <= 360):
-#                 raise serializers.ValidationError(
-#                     f"Direction must be between 0-360 for {source}"
-#                 )
-
-#             # Validate distance
-#             if not distance:
-#                 raise serializers.ValidationError(
-#                     f"Distance required for {source}"
-#                 )
-
-#             # If Others → require other_text
-#             if source == "Others" and not item.get("other_text"):
-#                 raise serializers.ValidationError(
-#                     "Provide other_text when source is Others"
-#                 )
-
-#         return data
 
 class SurveySkyVisibilitySerializer(serializers.ModelSerializer):
 
@@ -341,14 +255,6 @@ class SurveySkyVisibilitySerializer(serializers.ModelSerializer):
 
         return data
 
-
-# class SurveyPowerSerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = SurveyPower
-#         fields = ["id", "ac_grid", "solar_possible", "sun_hours"]
-#         read_only_fields = ["id", "created_at"]
-
-
 class SurveyPowerSerializer(serializers.ModelSerializer):
 
     class Meta:
@@ -380,16 +286,6 @@ class SurveyPowerSerializer(serializers.ModelSerializer):
                 })
 
         return data
-
-
-
-# class SurveyConnectivitySerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = SurveyConnectivity
-#         fields = ["id", "gsm_4g", "broadband","fiber","remarks"]
-#         read_only_fields = ["id", "created_at"]
-
-
 
 PROVIDER_CHOICES = [
     "Airtel",
@@ -472,8 +368,6 @@ class SurveyConnectivitySerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id"]
 
-
-
 class SurveyPhotoSerializer(serializers.ModelSerializer):
     class Meta:
         model = SurveyPhoto
@@ -484,10 +378,6 @@ class SurveyApprovalSerializer(serializers.ModelSerializer):
     class Meta:
         model = SurveyApproval
         fields = "__all__"
-
-
-
-
 
 class RinexFileSerializer(serializers.ModelSerializer):
 
@@ -502,28 +392,6 @@ class RinexFileSerializer(serializers.ModelSerializer):
                 "Only RINEX files (.obs, .nav, .rnx) are allowed"
             )
         return value
-
-
-
-from rest_framework import serializers
-from .models import Survey, SurveySubSite
-
-
-# 🔹 Subsite Serializer
-# class SubSiteSerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = SurveySubSite
-#         fields = [
-#             "id",
-#             "subsite_name",
-#             "priority",
-#             "created_at"
-#         ]
-
-
-# serializers.py
-
-
 
 class FullSubSiteSerializer(serializers.ModelSerializer):
 
@@ -569,11 +437,7 @@ class FullHierarchySurveySerializer(serializers.ModelSerializer):
             "subsites",
         ]
 
-
-
-from rest_framework import serializers
 from .models import State, District, SubDistrict, Town
-
 
 class TownSerializer(serializers.ModelSerializer):
     name = serializers.SerializerMethodField()

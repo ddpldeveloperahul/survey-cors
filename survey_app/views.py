@@ -20,7 +20,6 @@ class SignupAPI(APIView):
         serializer = SignupSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
-
         token = Token.objects.get(user=user)
 
         return Response({
@@ -139,6 +138,8 @@ class SurveyCreateAPI(APIView):
         else:
             return Response(serializer.errors, status=400)
 
+
+
 class SurveyFullDataAPI(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -147,14 +148,13 @@ class SurveyFullDataAPI(APIView):
 
         data = {
             "survey_id": str(survey.id),
-            "site_name": survey.station,
+            "site_name": survey.station.name,  # ✅ FIXED
             "status": survey.status,
             "subsites": []
         }
 
         for subsite in survey.subsites.all():
 
-            # Handle ONE photo safely
             photo_obj = getattr(subsite, "photos", None)
             photo_data = (
                 SurveyPhotoSerializer(photo_obj).data
@@ -163,7 +163,9 @@ class SurveyFullDataAPI(APIView):
 
             subsite_data = {
                 "subsite_id": str(subsite.id),
-                "subsite_name": subsite.location,  # Change to location field
+                "subsite_name": subsite.location,
+                "priority": subsite.priority,
+                "rinex_file": subsite.rinex_file.url if subsite.rinex_file else None,
 
                 "location": SurveyLocationSerializer(
                     getattr(subsite, "surveylocation", None)
@@ -185,7 +187,6 @@ class SurveyFullDataAPI(APIView):
                     getattr(subsite, "surveyconnectivity", None)
                 ).data if hasattr(subsite, "surveyconnectivity") else None,
 
-                # SINGLE photo (OneToOne)
                 "photo": photo_data
             }
 
@@ -193,18 +194,31 @@ class SurveyFullDataAPI(APIView):
 
         return Response(data)
 
-
 class SurveyListByUserAPI(APIView):
     permission_classes = [IsAuthenticated]
 
+    # def get(self, request):
+    #     surveys = Survey.objects.filter(surveyor=request.user).order_by("-created_at")
+    #     serializer = SurveySerializer(surveys, many=True)
+
+    #     return Response({
+    #         "count": surveys.count(),
+    #         "surveys": serializer.data
+    #     })
     def get(self, request):
-        surveys = Survey.objects.filter(surveyor=request.user).order_by("-created_at")
+        surveys = Survey.objects.filter(
+            surveyor=request.user
+        ).select_related(
+            "state", "district", "subdistrict", "station"
+        ).order_by("-created_at")
+
         serializer = SurveySerializer(surveys, many=True)
 
         return Response({
             "count": surveys.count(),
             "surveys": serializer.data
         })
+
 
 
 class SurveySubmitAPI(APIView):
@@ -275,7 +289,7 @@ class SurveySubmitAPI(APIView):
             if missing:
                 incomplete_subsites.append({
                     "subsite_id": str(subsite.id),
-                    "subsite_name": subsite.subsite_name,
+                    "subsite_name": subsite.location,
                     "missing": missing
                 })
 
@@ -307,74 +321,6 @@ class SurveySubmitAPI(APIView):
             },
             status=status.HTTP_200_OK
         )
-
-
-# class SurveySubSiteCreateAPI(APIView):
-#     permission_classes = [IsAuthenticated]
-#     # CREATE SUBSITE
-#     def post(self, request, survey_id):
-#         survey = get_object_or_404(Survey, id=survey_id)
-
-#         serializer = SurveySubSiteSerializer(data=request.data)
-#         if serializer.is_valid(raise_exception=True):
-#             subsite = serializer.save(survey=survey)
-#             return Response(serializer.data, status=status.HTTP_201_CREATED)
-#         else:
-#             return Response(
-#                 {
-#                     "errors": serializer.errors,
-#                     "priority": 1   # 👈 default priority explicitly show
-#                 },
-#                 status=status.HTTP_400_BAD_REQUEST
-#             )
-
-#     # LIST SUBSITES
-#     def get(self, request, survey_id,  subsite_id=None):
-#             # 🔹 Get single subsite
-#         if subsite_id:
-#             subsite = get_object_or_404(SurveySubSite,id=subsite_id,survey_id=survey_id)
-#             serializer = SurveySubSiteSerializer(subsite)
-#             return Response(serializer.data)
-
-#         # 🔹 Get all subsites of a survey
-#         subsites = SurveySubSite.objects.filter(survey_id=survey_id)
-#         serializer = SurveySubSiteSerializer(subsites, many=True)
-#         return Response(serializer.data, status=status.HTTP_200_OK)
-
-#     # UPDATE SUBSITE
-#     def put(self, request, survey_id, subsite_id):
-#         subsite = get_object_or_404(
-#             SurveySubSite,
-#             id=subsite_id,
-#             survey_id=survey_id
-#         )
-
-#         serializer = SurveySubSiteSerializer(
-#             subsite,
-#             data=request.data,
-#             partial=True
-#         )
-#         serializer.is_valid(raise_exception=True)
-#         serializer.save()
-
-#         return Response(serializer.data, status=status.HTTP_200_OK)
-
-#     # DELETE SUBSITE
-#     def delete(self, request, survey_id, subsite_id):
-#         subsite = get_object_or_404(
-#             SurveySubSite,
-#             id=subsite_id,
-#             survey_id=survey_id
-#         )
-#         subsite.delete()
-
-#         return Response(
-#             {"message": "Subsite deleted successfully"},
-#             status=status.HTTP_204_NO_CONTENT
-#         )
-
-
-
 
 
 class SurveySubSiteCreateAPI(APIView):
@@ -547,66 +493,6 @@ class SurveyMonumentAPI(APIView):
         monument.delete()
         return Response({"message": "Monument deleted successfully"}, status=204)
 
-#Survey Sky Visibility
-# class SurveySkyVisibilityAPI(APIView):
-#     permission_classes = [IsAuthenticated]
-#     parser_classes = [MultiPartParser, FormParser]
-
-#     # CREATE
-#     def post(self, request, subsite_id):
-#         subsite = get_object_or_404(SurveySubSite, id=subsite_id)
-
-#         if hasattr(subsite, "surveyskyvisibility"):
-#             return Response(
-#                 {"error": "Sky Visibility already exists"},
-#                 status=status.HTTP_400_BAD_REQUEST
-#             )
-
-#         serializer = SurveySkyVisibilitySerializer(data=request.data)
-#         serializer.is_valid(raise_exception=True)
-#         sky = serializer.save(survey=subsite)
-
-#         return Response(serializer.data, status=status.HTTP_201_CREATED)
-        
-
-#     # READ
-#     def get(self, request, subsite_id):
-#         sky = get_object_or_404(
-#             SurveySkyVisibility,
-#             survey_id=subsite_id
-#         )
-#         serializer = SurveySkyVisibilitySerializer(sky)
-#         return Response(serializer.data)
-
-#     # UPDATE
-#     def put(self, request, subsite_id):
-#         sky = get_object_or_404(
-#             SurveySkyVisibility,
-#             survey_id=subsite_id
-#         )
-
-#         serializer = SurveySkyVisibilitySerializer(
-#             sky,
-#             data=request.data,
-#             partial=True
-#         )
-#         serializer.is_valid(raise_exception=True)
-#         serializer.save()
-
-#         return Response(serializer.data)
-
-#     # DELETE
-#     def delete(self, request, subsite_id):
-#         sky = get_object_or_404(
-#             SurveySkyVisibility,
-#             survey_id=subsite_id
-#         )
-#         sky.delete()
-
-#         return Response(
-#             {"message": "Deleted successfully"},
-#             status=status.HTTP_204_NO_CONTENT
-    # )
 class SurveySkyVisibilityAPI(APIView):
     permission_classes = [IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser,JSONParser]
@@ -666,59 +552,7 @@ class SurveySkyVisibilityAPI(APIView):
             status=status.HTTP_204_NO_CONTENT
         )
 
-#ADD POWER DETAILS
-# class SurveyPowerAPI(APIView):
-#     permission_classes = [IsAuthenticated]
-#     # def post(self, request, subsite_id=None):
-#     #     serializer = SurveyPowerSerializer(data=request.data)
-#     #     if serializer.is_valid(raise_exception=True):
-#     #         serializer.is_valid(raise_exception=True)
-#     #         subsite = get_object_or_404(SurveySubSite, id=subsite_id)
-#     #         serializer.save(survey=subsite)
-#     #         return Response({"message": "Power Details created successfully", "power_id": serializer.data['id']}, status=201)
-#     #     else:
-#     #         return Response(serializer.errors, status=400)
-#     def post(self, request, subsite_id=None):
 
-#         subsite = get_object_or_404(SurveySubSite, id=subsite_id)
-
-#         # ✅ CHECK: Power details already exist
-#         if hasattr(subsite, "surveypower"):
-#             return Response(
-#                 {
-#                     "message": "Power details already exist for this subsite",
-#                     "power_id": subsite.surveypower.id
-#                 },
-#                 status=status.HTTP_200_OK
-#             )
-
-#         serializer = SurveyPowerSerializer(data=request.data)
-#         serializer.is_valid(raise_exception=True)
-#         serializer.save(survey=subsite)
-
-#         return Response(
-#             {
-#                 "message": "Power details created successfully",
-#                 "power_id": serializer.data["id"]
-#             },
-#             status=status.HTTP_201_CREATED
-#         )
-#     def get(self, request, subsite_id=None):
-#         powers = SurveyPower.objects.filter(survey_id=subsite_id)
-#         serializer = SurveyPowerSerializer(powers, many=True)
-#         return Response(serializer.data)
-#     def put(self, request, subsite_id=None):
-#         power = get_object_or_404(SurveyPower, survey_id=subsite_id)
-#         serializer = SurveyPowerSerializer(power, data=request.data, partial=True)
-#         if serializer.is_valid(raise_exception=True):
-#             serializer.save()
-#             return Response(serializer.data)
-#         else:
-#             return Response(serializer.errors, status=400)
-#     def delete(self, request, subsite_id=None):
-#         power = get_object_or_404(SurveyPower, survey_id=subsite_id)
-#         power.delete()
-#         return Response({"message": "Power Details deleted successfully"}, status=204)
 class SurveyPowerAPI(APIView):
 
     permission_classes = [IsAuthenticated]
@@ -1253,101 +1087,6 @@ class RinexUploadAPI(APIView):
         )
 
 
-
-
-# 🔹 Role Flow Mapping
-# ROLE_FLOW = {
-#     "SUPERVISOR": "SURVEYOR",
-#     "DIRECTOR": "SUPERVISOR",
-#     "ZONAL_CHIEF": "DIRECTOR",
-#     "GNRB": "ZONAL_CHIEF",
-# }
-
-
-# class HierarchySiteSubSiteAPI(APIView):
-#     permission_classes = [IsAuthenticated]
-
-#     def get(self, request):
-
-#         current_user = request.user
-#         current_role = current_user.role
-
-#         # ❌ Only hierarchy roles allowed
-#         if current_role not in ROLE_FLOW:
-#             return Response(
-#                 {"error": "You are not allowed to view this data"},
-#                 status=status.HTTP_403_FORBIDDEN
-#             )
-
-#         # 🔹 Find which role data should be visible
-#         target_role = ROLE_FLOW[current_role]
-
-#         # 🔹 Get lower role users (same zone)
-#         lower_users = User.objects.filter(
-#             role=target_role,
-#             zone=current_user.zone
-#         )
-
-#         # 🔹 Get their surveys with subsites
-#         surveys = Survey.objects.filter(
-#             surveyor__in=lower_users
-#         ).select_related("surveyor").prefetch_related("subsites").order_by("-created_at")
-
-#         serializer = HierarchySurveySerializer(surveys, many=True)
-#         return Response(serializer.data, status=status.HTTP_200_OK)
-
-
-
-# views.py
-
-# from .serializers import FullHierarchySurveySerializer
-
-
-# class HierarchySurveyAPI(APIView):
-#     permission_classes = [IsAuthenticated]
-
-#     ROLE_FLOW = {
-#         "SUPERVISOR": "SURVEYOR",
-#         "DIRECTOR": "SUPERVISOR",
-#         "ZONAL_CHIEF": "DIRECTOR",
-#         "GNRB": "ZONAL_CHIEF",
-#     }
-
-#     def get(self, request):
-
-#         user = request.user
-#         role = user.role
-
-#         if role not in self.ROLE_FLOW:
-#             return Response(
-#                 {"error": "You are not allowed"},
-#                 status=status.HTTP_403_FORBIDDEN
-#             )
-
-#         target_role = self.ROLE_FLOW[role]
-
-#         # 🔹 Direct lower role users
-#         lower_users = User.objects.filter(
-#             role=target_role,
-#             zone=user.zone
-#         )
-
-#         # 🔹 Their surveys
-#         surveys = Survey.objects.filter(
-#             surveyor__in=lower_users
-#         ).select_related("surveyor").prefetch_related(
-#             "subsites__surveylocation",
-#             "subsites__surveymonument",
-#             "subsites__surveyskyvisibility",
-#             "subsites__surveypower",
-#             "subsites__surveyconnectivity",
-#             "subsites__photos",
-#         ).order_by("-created_at")
-
-#         serializer = FullHierarchySurveySerializer(surveys, many=True)
-#         return Response(serializer.data)
-
-
 class HierarchySurveyAPI(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -1409,6 +1148,7 @@ class HierarchySurveyAPI(APIView):
         serializer = FullHierarchySurveySerializer(surveys, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
     
+
 class StateListAPI(APIView):
     def get(self, request, state_id=None):
 
@@ -1418,8 +1158,8 @@ class StateListAPI(APIView):
             return Response({
                 "id": state.id,
                 "name": state.name,
-                "latitude": state.latitude,
-                "longitude": state.longitude
+                # "latitude": state.latitude,
+                # "longitude": state.longitude
             })
 
         # 🔹 If no state_id → return all states
@@ -1429,78 +1169,98 @@ class StateListAPI(APIView):
             {
                 "id": s.id,
                 "name": s.name,
-                "latitude": s.latitude,
-                "longitude": s.longitude
             }
             for s in states
         ])
-
-
-from .forms import SurveyForm
-def create_survey(request):
-    if request.method == "POST":
-        form = SurveyForm(request.POST)
-        if form.is_valid():
-            survey = form.save(commit=False)
-            survey.surveyor = request.user
-            survey.save()
-            return redirect("survey_list")
-    else:
-        form = SurveyForm()
-
-    return render(request, "survey.html", {"form": form})  
-
-
+        
+        
 class DistrictByStateAPI(APIView):
 
-    def get(self, request, state_id=None):
+    def get(self, request, state_id):
 
-        # If state_id given → filter
-        if state_id:
-            districts = District.objects.filter(state_id=state_id).values("id", "name")
-            return Response(districts)
+        # 🔹 Get state
+        state = get_object_or_404(State, id=state_id)
 
-        # If no state_id → return all districts
-        districts = District.objects.all().values("id", "name")
-        return Response(districts)
+        # 🔹 Get districts of that state
+        districts = District.objects.filter(state_id=state_id)
 
+        district_list = [
+            {
+                "district_id": d.id,
+                "district_name": d.name
+            }
+            for d in districts
+        ]
+
+        return Response({
+            "state_id": state.id,
+            "state_name": state.name,
+            "district_count": districts.count(),
+            "districts": district_list
+        })
 
 class SubDistrictByDistrictAPI(APIView):
+
     def get(self, request, district_id):
+
+        # 🔹 Get district
+        district = get_object_or_404(District.objects.select_related("state"), id=district_id)
+
+        # 🔹 Get subdistricts
         subs = SubDistrict.objects.filter(district_id=district_id)
-        return Response([
-            {"id": s.id, "name": s.name}
+
+        sub_list = [
+            {
+                "subdistrict_id": s.id,
+                "subdistrict_name": s.name
+            }
             for s in subs
-        ])
-        
+        ]
+
+        return Response({
+            "state_id": district.state.id,
+            "state_name": district.state.name,
+            "district_id": district.id,
+            "district_name": district.name,
+            "subdistrict_count": subs.count(),
+            "subdistricts": sub_list
+        })
+
 class TownBySubDistrictAPI(APIView):
 
     def get(self, request, subdistrict_id):
+
+        subdistrict = get_object_or_404(
+            SubDistrict.objects.select_related("district__state"),
+            id=subdistrict_id
+        )
+
         towns = Town.objects.filter(subdistrict_id=subdistrict_id)
 
-        data = []
-        for t in towns:
-            if t.sequence > 1:
-                name = f"{t.base_name} {t.sequence}"
-            else:
-                name = t.base_name
+        town_list = []
 
-            data.append({
-                "id": t.id,
-                "name": name
+        for t in towns:
+            town_list.append({
+                "town_id": t.id,
+                "town_name": t.name,   # ✅ Direct name field
+                "latitude": t.latitude,
+                "longitude": t.longitude
             })
 
-        return Response(data)
+        return Response({
+            "state_id": subdistrict.district.state.id,
+            "state_name": subdistrict.district.state.name,
 
-        
-        
+            "district_id": subdistrict.district.id,
+            "district_name": subdistrict.district.name,
 
+            "subdistrict_id": subdistrict.id,
+            "subdistrict_name": subdistrict.name,
 
+            "town_count": towns.count(),
+            "towns": town_list
+        })
 
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from .models import State, District
-from .serializers import StateSerializer, DistrictSerializer
 
 
 class LocationHierarchyAPI(APIView):
@@ -1530,3 +1290,88 @@ class LocationHierarchyAPI(APIView):
         states = State.objects.all()
         serializer = StateSerializer(states, many=True)
         return Response(serializer.data)
+
+
+class StatedbListAPI(APIView):
+    def get(self, request, state_id=None):
+
+        # 🔹 If specific state requested
+        if state_id:
+            state = get_object_or_404(Statedb, id=state_id)
+            return Response({
+                "id": state.id,
+                "name": state.name,
+                # "latitude": state.latitude,
+                # "longitude": state.longitude
+            })
+
+        # 🔹 If no state_id → return all states
+        states = Statedb.objects.all().order_by("name")
+
+        return Response([
+            {
+                "id": s.id,
+                "name": s.name,
+                "latitude":s.latitude,
+                "longitude":s.longitude
+            }
+            for s in states
+        ])
+        
+        
+class DistrictdbByStateAPI(APIView):
+
+    def get(self, request, state_id):
+
+        # 🔹 Get state
+        state = get_object_or_404(Statedb, id=state_id)
+
+        # 🔹 Get districts of that state
+        districts = Districtdb.objects.filter(state_id=state_id)
+
+        district_list = [
+            {
+                "district_id": d.id,
+                "district_name": d.name,
+                "latitude":d.latitude,
+                "longitude":d.longitude
+            }
+            for d in districts
+        ]
+
+        return Response({
+            "state_id": state.id,
+            "state_name": state.name,
+            "latitude":state.latitude,
+            "longitude":state.longitude,
+            "district_count": districts.count(),
+            "districts": district_list
+        })
+class StationdbByDistrictAPI(APIView):
+
+    def get(self, request, district_id):
+
+        # 🔹 Get district
+        district = get_object_or_404(Districtdb.objects.select_related("state"), id=district_id)
+
+        # 🔹 Get subdistricts
+        subs = Stationdb.objects.filter(district_id=district_id)
+
+        sub_list = [
+            {
+                "subdistrict_id": s.id,
+                "subdistrict_name": s.name,
+                "latitude":s.latitude,
+                "longitude":s.longitude
+            }
+            for s in subs
+        ]
+
+        return Response({
+            "state_id": district.state.id,
+            "state_name": district.state.name,
+            "district_id": district.id,
+            "district_name": district.name,
+            "subdistrict_count": subs.count(),
+            "subdistricts": sub_list
+        })
