@@ -5,7 +5,22 @@ from rest_framework import serializers
 from django.contrib.auth import authenticate
 from rest_framework.authtoken.models import Token
 from .models import User
+from rest_framework import serializers
+from .models import User, PasswordResetOTP
 
+
+class ResetPasswordSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    otp = serializers.CharField(max_length=6)
+    new_password = serializers.CharField(write_only=True)
+    confirm_password = serializers.CharField(write_only=True)
+
+    def validate(self, data):
+        # ✅ Password match check
+        if data["new_password"] != data["confirm_password"]:
+            raise serializers.ValidationError("Passwords do not match")
+
+        return data
 class SignupSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
 
@@ -474,3 +489,38 @@ class StateSerializer(serializers.ModelSerializer):
     class Meta:
         model = State
         fields = ["id", "name", "latitude", "longitude", "districts"]
+
+
+
+from survey_app.models import Districtdb
+
+
+class DistrictdbSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Districtdb
+        fields = [
+            "id",
+            "state",
+            "name",
+            "latitude",
+            "longitude",
+        ]
+        
+        
+from rest_framework import serializers
+from survey_app.models import Stationdb
+
+
+class StationdbSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Stationdb
+        fields = [
+            "id",
+            "district",
+            "sl_no",
+            "name",
+            "code",
+            "latitude",
+            "longitude",
+            "height",
+        ]

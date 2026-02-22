@@ -8,6 +8,9 @@ urlpatterns = [
     
     path("signup/", SignupAPI.as_view(), name="signup"),
     path("login/", LoginAPI.as_view(), name="login"),
+    path("forgot-password/", ForgotPasswordAPI.as_view()),
+    path("reset-password/", ResetPasswordAPI.as_view()),
+    path("logout/", LogoutAPI.as_view()),
     # SURVEYOR APIs
     # -------------------------
     # Create multiple sites (same user)
@@ -93,6 +96,19 @@ urlpatterns = [
     path("statesdb/<int:state_id>/districtsdb/", DistrictdbByStateAPI.as_view(), name="districtsdb"),
     path("districtsdb/<int:district_id>/stationdb/", StationdbByDistrictAPI.as_view(), name="stationdb"),
     
+    
+    
+    path("districtsdb/", DistrictdbCRUDAPI.as_view(), name="district-list-create"),
+
+    # Single district (GET, PUT, DELETE)
+    path("districtsdb/<int:pk>/", DistrictdbCRUDAPI.as_view(), name="district-detail"),
+    
+    
+    # All stations + Create
+    path("stationsdb/", StationdbCRUDAPI.as_view(), name="station-list-create"),
+
+    # Single station (GET, PUT, DELETE)
+    path("stationsdb/<int:pk>/", StationdbCRUDAPI.as_view(), name="station-detail"),
     
     
     

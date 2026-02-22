@@ -11,7 +11,10 @@ from .models import *
 from .serializers import *
 from rest_framework.permissions import AllowAny
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
-
+import random
+from django.core.mail import send_mail
+from django.conf import settings
+from .models import PasswordResetOTP
 
 
 class SignupAPI(APIView):
@@ -47,6 +50,81 @@ class LoginAPI(APIView):
             "token": token.key
         })
 
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.authentication import TokenAuthentication
+
+
+class LogoutAPI(APIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        # Delete the user's token
+        request.user.auth_token.delete()
+
+        return Response({
+            "message": "Logout successful"
+        })
+
+class ForgotPasswordAPI(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        email = request.data.get("email")
+
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            return Response({"error": "User not found"}, status=404)
+
+        # Generate 6-digit OTP
+        otp = str(random.randint(100000, 999999))
+
+        # Delete old OTP
+        PasswordResetOTP.objects.filter(user=user).delete()
+
+        # Save new OTP
+        PasswordResetOTP.objects.create(user=user, otp=otp)
+
+        # Send Email
+        send_mail(
+            subject="Your Password Reset OTP",
+            message=f"Hello {user.username},\n\nYour OTP is: {otp}\n\nValid for 5 minutes.",
+            from_email=settings.EMAIL_HOST_USER,
+            recipient_list=[user.email],
+            fail_silently=False,
+        )
+
+        return Response({"message": "OTP sent to your email"})
+    
+class ResetPasswordAPI(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = ResetPasswordSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        email = serializer.validated_data["email"]
+        otp = serializer.validated_data["otp"]
+        new_password = serializer.validated_data["new_password"]
+
+        try:
+            user = User.objects.get(email=email)
+            otp_obj = PasswordResetOTP.objects.get(user=user, otp=otp)
+        except:
+            return Response({"error": "Invalid OTP"}, status=400)
+
+        if otp_obj.is_expired():
+            otp_obj.delete()
+            return Response({"error": "OTP expired"}, status=400)
+
+        # ✅ Set new password
+        user.set_password(new_password)
+        user.save()
+
+        otp_obj.delete()
+
+        return Response({"message": "Password reset successful"})
 class AllUsersAPI(APIView):
     permission_classes = [IsAuthenticated]  # Change if needed
 
@@ -362,6 +440,24 @@ class SurveySubSiteCreateAPI(APIView):
         return Response(serializer.data)
 
     # UPDATE
+    # def put(self, request, survey_id, subsite_id):
+
+    #     subsite = get_object_or_404(
+    #         SurveySubSite,
+    #         id=subsite_id,
+    #         survey_id=survey_id
+    #     )
+
+    #     serializer = SurveySubSiteSerializer(
+    #         subsite,
+    #         data=request.data,
+    #         partial=True
+    #     )
+
+    #     serializer.is_valid(raise_exception=True)
+    #     serializer.save()
+
+    #     return Response(serializer.data)
     def put(self, request, survey_id, subsite_id):
 
         subsite = get_object_or_404(
@@ -369,6 +465,13 @@ class SurveySubSiteCreateAPI(APIView):
             id=subsite_id,
             survey_id=survey_id
         )
+
+        # ❌ Prevent update after submission
+        if subsite.survey.status == "SUBMITTED":
+            return Response(
+                {"error": "Cannot edit subsite after survey submission"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         serializer = SurveySubSiteSerializer(
             subsite,
@@ -382,6 +485,21 @@ class SurveySubSiteCreateAPI(APIView):
         return Response(serializer.data)
 
     # DELETE
+    # def delete(self, request, survey_id, subsite_id):
+
+    #     subsite = get_object_or_404(
+    #         SurveySubSite,
+    #         id=subsite_id,
+    #         survey_id=survey_id
+    #     )
+
+    #     subsite.delete()
+
+    #     return Response(
+    #         {"message": "Subsite deleted successfully"},
+    #         status=status.HTTP_204_NO_CONTENT
+    #     )    
+
     def delete(self, request, survey_id, subsite_id):
 
         subsite = get_object_or_404(
@@ -390,12 +508,20 @@ class SurveySubSiteCreateAPI(APIView):
             survey_id=survey_id
         )
 
+        # ❌ Prevent delete after submission
+        if subsite.survey.status == "SUBMITTED":
+            return Response(
+                {"error": "Cannot delete subsite after survey submission"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         subsite.delete()
 
         return Response(
             {"message": "Subsite deleted successfully"},
             status=status.HTTP_204_NO_CONTENT
         )
+
     
 #Survey Location       
 class SurveyLocationAPI(APIView):
@@ -1318,6 +1444,53 @@ class StatedbListAPI(APIView):
             for s in states
         ])
         
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from django.shortcuts import get_object_or_404
+from survey_app.models import Districtdb
+from survey_app.serializers import DistrictdbSerializer
+
+
+class DistrictdbCRUDAPI(APIView):
+
+    # 🔹 READ (All or Single)
+    def get(self, request, pk=None):
+
+        if pk:
+            district = get_object_or_404(Districtdb, pk=pk)
+            serializer = DistrictdbSerializer(district)
+            return Response(serializer.data)
+
+        districts = Districtdb.objects.all()
+        serializer = DistrictdbSerializer(districts, many=True)
+        return Response(serializer.data)
+
+    # 🔹 CREATE
+    def post(self, request):
+        serializer = DistrictdbSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    # 🔹 UPDATE
+    # def put(self, request, pk):
+    #     district = get_object_or_404(Districtdb, pk=pk)
+    #     serializer = DistrictdbSerializer(district, data=request.data)
+    #     if serializer.is_valid():
+    #         serializer.save()
+    #         return Response(serializer.data)
+    #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    # # 🔹 DELETE
+    # def delete(self, request, pk):
+    #     district = get_object_or_404(Districtdb, pk=pk)
+    #     district.delete()
+    #     return Response(
+    #         {"message": "District deleted successfully"},
+    #         status=status.HTTP_204_NO_CONTENT
+    #     )
         
 class DistrictdbByStateAPI(APIView):
 
@@ -1359,8 +1532,8 @@ class StationdbByDistrictAPI(APIView):
 
         sub_list = [
             {
-                "subdistrict_id": s.id,
-                "subdistrict_name": s.name,
+                "station_id": s.id,
+                "station_name": s.name,
                 "latitude":s.latitude,
                 "longitude":s.longitude
             }
@@ -1372,6 +1545,48 @@ class StationdbByDistrictAPI(APIView):
             "state_name": district.state.name,
             "district_id": district.id,
             "district_name": district.name,
-            "subdistrict_count": subs.count(),
-            "subdistricts": sub_list
+            "station": subs.count(),
+            "station": sub_list
         })
+
+class StationdbCRUDAPI(APIView):
+
+    # 🔹 READ (All or Single)
+    def get(self, request, pk=None):
+
+        if pk:
+            station = get_object_or_404(Stationdb, pk=pk)
+            serializer = StationdbSerializer(station)
+            return Response(serializer.data)
+
+        stations = Stationdb.objects.all()
+        serializer = StationdbSerializer(stations, many=True)
+        return Response(serializer.data)
+
+    # 🔹 CREATE
+    def post(self, request):
+        serializer = StationdbSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    # 🔹 UPDATE
+    # def put(self, request, pk):
+    #     station = get_object_or_404(Stationdb, pk=pk)
+    #     serializer = StationdbSerializer(station, data=request.data)
+    #     if serializer.is_valid():
+    #         serializer.save()
+    #         return Response(serializer.data)
+    #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    # # 🔹 DELETE
+    # def delete(self, request, pk):
+    #     station = get_object_or_404(Stationdb, pk=pk)
+    #     station.delete()
+    #     return Response(
+    #         {"message": "Station deleted successfully"},
+    #         status=status.HTTP_204_NO_CONTENT
+    #     )
+
+

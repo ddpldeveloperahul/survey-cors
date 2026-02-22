@@ -204,6 +204,7 @@ class SurveySubSite(models.Model):
         default=1,
         help_text="Priority of subsite (lower number = higher priority)"
     )
+    contact_details = models.CharField(max_length=255, blank=True)
 
     # ✅ OPTIONAL RINEX FILE
     rinex_file = models.FileField(
@@ -278,7 +279,7 @@ class SurveyMonument(models.Model):
     )
 
     def __str__(self):
-        return f"Monument for {self.survey.subsite_name}"
+        return f"Monument for {self.survey.location}"
 
 EMI_SOURCE_CHOICES = [
     "HT Powerline",
@@ -358,7 +359,7 @@ class SurveyPower(models.Model):
     solar_exposure_hours = models.IntegerField()
 
     def __str__(self):
-        return f"Power Details for {self.survey.subsite_name}"
+        return f"Power Details for {self.survey.location}"
 
 
 
@@ -399,7 +400,7 @@ class SurveyConnectivity(models.Model):
     remarks = models.TextField(blank=True)
 
     def __str__(self):
-        return f"Connectivity Details for {self.survey.subsite_name}"
+        return f"Connectivity Details for {self.survey.location}"
 
 
 class SurveyPhoto(models.Model):
@@ -416,7 +417,7 @@ class SurveyPhoto(models.Model):
     captured_at = models.DateTimeField(auto_now_add=True)
     
     def  __str__(self):
-        return f"Photos of {self.sub_site.subsite_name}"
+        return f"Photos of {self.sub_site.location}"
 
 class SurveyApproval(models.Model):
     LEVEL_CHOICES = [
@@ -439,7 +440,7 @@ class SurveyApproval(models.Model):
     approved_at = models.DateTimeField(auto_now_add=True)
     
     def __str__(self):
-        return f"{self.survey.site_name} - Level {self.approval_level} - {self.decision}"
+        return f"{self.survey.station} - Level {self.approval_level} - {self.decision}"
 
 
 
@@ -528,3 +529,17 @@ class Stationdb(models.Model):
 
     def __str__(self):
         return self.name
+
+
+
+import random
+from django.utils import timezone
+from datetime import timedelta
+
+class PasswordResetOTP(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    otp = models.CharField(max_length=6)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def is_expired(self):
+        return self.created_at < timezone.now() - timedelta(minutes=10)
