@@ -15,6 +15,8 @@ import random
 from django.core.mail import send_mail
 from django.conf import settings
 from .models import PasswordResetOTP
+from rest_framework.authentication import TokenAuthentication
+
 
 
 class SignupAPI(APIView):
@@ -50,8 +52,6 @@ class LoginAPI(APIView):
             "token": token.key
         })
 
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.authentication import TokenAuthentication
 
 
 class LogoutAPI(APIView):
@@ -89,7 +89,7 @@ class ForgotPasswordAPI(APIView):
         # Send Email
         send_mail(
             subject="Your Password Reset OTP",
-            message=f"Hello {user.username},\n\nYour OTP is: {otp}\n\nValid for 5 minutes.",
+            message=f"Hello {user.username},\n\nYour OTP is: {otp}\n\nValid for 10 minutes.",
             from_email=settings.EMAIL_HOST_USER,
             recipient_list=[user.email],
             fail_silently=False,

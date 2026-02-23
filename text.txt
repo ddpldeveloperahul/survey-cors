@@ -158,3 +158,24 @@ approve
     "decision": "APPROVED",
     "remarks": "Looks good"
 }
+
+
+
+
+#oassword reset/forgot
+http://127.0.0.1:8000/api/reset-password/
+
+{
+    "email":"rahuulkumar23@gmail.com",
+    "otp":"660312",
+    "new_password":"rahul@123",
+    "confirm_password":"rahul@123"
+   
+
+}
+
+http://127.0.0.1:8000/api/forgot-password/
+
+{
+  "email":"rahuulkumar23@gmail.com"
+}
