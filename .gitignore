@@ -1,0 +1,51 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environment
+venv/
+env/
+ENV/
+
+# Django
+*.log
+db.sqlite3
+media/
+staticfiles/
+
+# Environment variables
+.env
+
+# VS Code
+.vscode/
+
+# PyCharm
+.idea/
+
+# Mac
+.DS_Store
+
+# Windows
+Thumbs.db
+
+# Coverage
+.coverage
+htmlcov/
+
+# Migrations (optional - if team project, do NOT ignore)
+# */migrations/*
+# !*/migrations/__init__.py
+
+# Node (if frontend inside project)
+node_modules/
+
+# Build files
+dist/
+build/
+
+# pytest
+.pytest_cache/
+
+# mypy
+.mypy_cache/
