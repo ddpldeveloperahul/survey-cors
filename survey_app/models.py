@@ -204,15 +204,14 @@ class SurveySubSite(models.Model):
         default=1,
         help_text="Priority of subsite (lower number = higher priority)"
     )
-    contact_details = models.CharField(max_length=255, blank=True)
-
+    
     # ✅ OPTIONAL RINEX FILE
     rinex_file = models.FileField(
         upload_to="rinex_files/",
         null=True,
         blank=True
     )
-
+    contact_details = models.CharField(max_length=255, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

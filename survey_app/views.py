@@ -55,7 +55,6 @@ class LoginAPI(APIView):
 
 
 class LogoutAPI(APIView):
-    authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
@@ -1222,39 +1221,35 @@ class HierarchySurveyAPI(APIView):
         role = user.role
         zone = user.zone
 
-        # 🔹 SURVEYOR → Only his own data
         if role == "SURVEYOR":
-            surveys = Survey.objects.filter(
-                surveyor=user
-            )
+            surveys = Survey.objects.filter(surveyor=user)
 
-        # 🔹 SUPERVISOR → Surveyor SUBMITTED data
         elif role == "SUPERVISOR":
             surveys = Survey.objects.filter(
                 surveyor__zone=zone,
                 status="SUBMITTED"
             )
 
-        # 🔹 DIRECTOR → Supervisor Approved data
         elif role == "DIRECTOR":
             surveys = Survey.objects.filter(
                 surveyor__zone=zone,
                 status="SUPERVISOR_APPROVED"
             )
 
-        # 🔹 ZONAL CHIEF → Director Approved data
         elif role == "ZONAL_CHIEF":
             surveys = Survey.objects.filter(
                 surveyor__zone=zone,
                 status="DIRECTOR_APPROVED"
             )
 
-        # 🔹 GNRB → Zonal Chief Approved data
         elif role == "GNRB":
             surveys = Survey.objects.filter(
                 surveyor__zone=zone,
                 status="ZONAL_CHIEF_APPROVED"
             )
+
+        elif role == "ADMIN":
+            surveys = Survey.objects.all()
 
         else:
             return Response(
@@ -1262,7 +1257,13 @@ class HierarchySurveyAPI(APIView):
                 status=status.HTTP_403_FORBIDDEN
             )
 
-        surveys = surveys.select_related("surveyor").prefetch_related(
+        surveys = surveys.select_related(
+            "surveyor",
+            "state",
+            "district",
+            "subdistrict",
+            "station"
+        ).prefetch_related(
             "subsites__surveylocation",
             "subsites__surveymonument",
             "subsites__surveyskyvisibility",
@@ -1273,8 +1274,6 @@ class HierarchySurveyAPI(APIView):
 
         serializer = FullHierarchySurveySerializer(surveys, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
-    
-
 class StateListAPI(APIView):
     def get(self, request, state_id=None):
 

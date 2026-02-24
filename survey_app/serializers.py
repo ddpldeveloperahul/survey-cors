@@ -110,6 +110,7 @@ class SurveySubSiteSerializer(serializers.ModelSerializer):
             "location",
             "priority",
             "rinex_file",
+            "contact_details",
             "created_at",
         ]
         read_only_fields = ["id", "survey", "created_at"]
@@ -410,7 +411,7 @@ class RinexFileSerializer(serializers.ModelSerializer):
 
 class FullSubSiteSerializer(serializers.ModelSerializer):
 
-    location = SurveyLocationSerializer(source="surveylocation", read_only=True)
+    location_details = SurveyLocationSerializer(source="surveylocation", read_only=True)
     monument = SurveyMonumentSerializer(source="surveymonument", read_only=True)
     sky_visibility = SurveySkyVisibilitySerializer(source="surveyskyvisibility", read_only=True)
     power = SurveyPowerSerializer(source="surveypower", read_only=True)
@@ -421,21 +422,24 @@ class FullSubSiteSerializer(serializers.ModelSerializer):
         model = SurveySubSite
         fields = [
             "id",
-            "subsite_name",
+            "location",
             "priority",
             "created_at",
-            "location",
+            "location_details",
             "monument",
             "sky_visibility",
             "power",
             "connectivity",
             "photos",
         ]
-
-
 class FullHierarchySurveySerializer(serializers.ModelSerializer):
 
-    subsites = FullSubSiteSerializer(many=True)
+    state = serializers.CharField(source="state.name", read_only=True)
+    district = serializers.CharField(source="district.name", read_only=True)
+    subdistrict = serializers.CharField(source="subdistrict.name", read_only=True)
+    station = serializers.CharField(source="station.name", read_only=True)
+
+    subsites = FullSubSiteSerializer(many=True, read_only=True)
     surveyor_name = serializers.CharField(source="surveyor.name", read_only=True)
     surveyor_username = serializers.CharField(source="surveyor.username", read_only=True)
 
@@ -443,7 +447,10 @@ class FullHierarchySurveySerializer(serializers.ModelSerializer):
         model = Survey
         fields = [
             "id",
-            "site_name",
+            "state",
+            "district",
+            "subdistrict",
+            "station",
             "status",
             "remarks",
             "created_at",
@@ -451,6 +458,30 @@ class FullHierarchySurveySerializer(serializers.ModelSerializer):
             "surveyor_username",
             "subsites",
         ]
+
+# class FullHierarchySurveySerializer(serializers.ModelSerializer):
+
+#     subsites = FullSubSiteSerializer(many=True, read_only=True)
+#     surveyor_name = serializers.CharField(source="surveyor.name", read_only=True)
+#     surveyor_username = serializers.CharField(source="surveyor.username", read_only=True)
+
+#     class Meta:
+#         model = Survey
+#         fields = [
+#             "id",
+#             "state",
+#             "district",
+#             "subdistrict",
+#             "station",
+#             "status",
+#             "remarks",
+#             "created_at",
+#             "surveyor_name",
+#             "surveyor_username",
+#             "subsites",
+#         ]
+        
+        
 
 from .models import State, District, SubDistrict, Town
 

@@ -81,7 +81,7 @@ power
   
   "ac_grid": true,
   "solar_possible": true,
-  "sun_hours": 8
+  "olar_exposure_hours": 8
 }
 
 {
