@@ -298,9 +298,110 @@ class SurveyListByUserAPI(APIView):
 
 
 
+# class SurveySubmitAPI(APIView):
+#     permission_classes = [IsAuthenticated]
+
+#     def post(self, request, survey_id):
+
+#         survey = get_object_or_404(
+#             Survey,
+#             id=survey_id,
+#             surveyor=request.user
+#         )
+
+#         # ✅ Allow only DRAFT or REJECTED
+#         if survey.status not in ["DRAFT", "REJECTED"]:
+#             return Response(
+#                 {
+#                     "error": f"Survey cannot be submitted in current state ({survey.status})"
+#                 },
+#                 status=status.HTTP_400_BAD_REQUEST
+#             )
+
+#         subsites = survey.subsites.all()
+
+#         if not subsites.exists():
+#             return Response(
+#                 {"error": "No subsites found"},
+#                 status=status.HTTP_400_BAD_REQUEST
+#             )
+
+#         incomplete_subsites = []
+
+#         for subsite in subsites:
+#             missing = []
+
+#             if not hasattr(subsite, "surveylocation"):
+#                 missing.append("Location")
+
+#             if not hasattr(subsite, "surveymonument"):
+#                 missing.append("Monument")
+
+#             if not hasattr(subsite, "surveyskyvisibility"):
+#                 missing.append("Sky Visibility")
+
+#             if not hasattr(subsite, "surveypower"):
+#                 missing.append("Power")
+
+#             if not hasattr(subsite, "surveyconnectivity"):
+#                 missing.append("Connectivity")
+
+#             # ✅ Photos check (OneToOne safe)
+#             try:
+#                 photos = subsite.photos
+#             except SurveyPhoto.DoesNotExist:
+#                 photos = None
+
+#             if not photos:
+#                 missing.append("Photos")
+#             else:
+#                 if not all([
+#                     photos.north_photo,
+#                     photos.east_photo,
+#                     photos.south_photo,
+#                     photos.west_photo
+#                 ]):
+#                     missing.append("All 4 directional photos required")
+
+#             if missing:
+#                 incomplete_subsites.append({
+#                     "subsite_id": str(subsite.id),
+#                     "subsite_name": subsite.location,
+#                     "missing": missing
+#                 })
+
+#         # ❌ Validation failed
+#         if incomplete_subsites:
+#             return Response(
+#                 {
+#                     "error": "Survey cannot be submitted",
+#                     "current_status": survey.status,
+#                     "incomplete_subsites": incomplete_subsites
+#                 },
+#                 status=status.HTTP_400_BAD_REQUEST
+#             )
+
+#         # ✅ SUBMIT / RE-SUBMIT
+#         survey.status = "SUBMITTED"
+
+#         # clear rejection reason if exists
+#         if hasattr(survey, "rejection_reason"):
+#             survey.rejection_reason = None
+
+#         survey.save(update_fields=["status"])
+
+#         return Response(
+#             {
+#                 "message": "Survey submitted successfully",
+#                 "survey_id": survey.id,
+#                 "status": survey.status
+#             },
+#             status=status.HTTP_200_OK
+#         )
 class SurveySubmitAPI(APIView):
     permission_classes = [IsAuthenticated]
 
+    @transaction.atomic
     def post(self, request, survey_id):
 
         survey = get_object_or_404(
@@ -320,11 +421,39 @@ class SurveySubmitAPI(APIView):
 
         subsites = survey.subsites.all()
 
+        # ✅ Subsite existence check
         if not subsites.exists():
             return Response(
                 {"error": "No subsites found"},
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+        # ==========================================
+        # ✅ 1️⃣ DUPLICATE PRIORITY CHECK
+        # ==========================================
+
+        priorities = list(subsites.values_list("priority", flat=True))
+
+        seen = set()
+        duplicates = set()
+
+        for p in priorities:
+            if p in seen:
+                duplicates.add(p)
+            seen.add(p)
+
+        if duplicates:
+            return Response(
+                {
+                    "error": "Duplicate priority not allowed",
+                    "duplicate_priorities": list(duplicates)
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # ==========================================
+        # ✅ 2️⃣ REQUIRED DATA VALIDATION
+        # ==========================================
 
         incomplete_subsites = []
 
@@ -346,7 +475,7 @@ class SurveySubmitAPI(APIView):
             if not hasattr(subsite, "surveyconnectivity"):
                 missing.append("Connectivity")
 
-            # ✅ Photos check (OneToOne safe)
+            # ✅ Photos check
             try:
                 photos = subsite.photos
             except SurveyPhoto.DoesNotExist:
@@ -381,10 +510,13 @@ class SurveySubmitAPI(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # ✅ SUBMIT / RE-SUBMIT
+        # ==========================================
+        # ✅ 3️⃣ FINAL SUBMIT
+        # ==========================================
+
         survey.status = "SUBMITTED"
 
-        # clear rejection reason if exists
+        # Clear rejection reason if exists
         if hasattr(survey, "rejection_reason"):
             survey.rejection_reason = None
 
@@ -398,7 +530,6 @@ class SurveySubmitAPI(APIView):
             },
             status=status.HTTP_200_OK
         )
-
 
 class SurveySubSiteCreateAPI(APIView):
 
@@ -521,7 +652,7 @@ class SurveySubSiteCreateAPI(APIView):
             status=status.HTTP_204_NO_CONTENT
         )
 
-    
+
 #Survey Location       
 class SurveyLocationAPI(APIView):
     permission_classes = [IsAuthenticated]

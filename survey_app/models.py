@@ -202,9 +202,10 @@ class SurveySubSite(models.Model):
 
     priority = models.IntegerField(
         default=1,
+        # unique=True,
         help_text="Priority of subsite (lower number = higher priority)"
     )
-    
+
     # ✅ OPTIONAL RINEX FILE
     rinex_file = models.FileField(
         upload_to="rinex_files/",
@@ -219,6 +220,11 @@ class SurveySubSite(models.Model):
 
     def __str__(self):
         return f"{self.location} (Priority {self.priority})"
+
+
+
+
+
 
 
 class SurveyLocation(models.Model):

@@ -81,7 +81,7 @@ power
   
   "ac_grid": true,
   "solar_possible": true,
-  "olar_exposure_hours": 8
+  solar_exposure_hours": 8
 }
 
 {
@@ -108,7 +108,7 @@ PROVIDER_CHOICES = [
     "Others",
 ]
 
-conctivity
+connectivity
 
 {
   "gsm_4g": ["Airtel"],
