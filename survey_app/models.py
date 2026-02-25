@@ -193,7 +193,7 @@ class SurveySubSite(models.Model):
     )
 
     survey = models.ForeignKey(
-        Survey,
+        "Survey",
         related_name="subsites",
         on_delete=models.CASCADE
     )
@@ -202,17 +202,17 @@ class SurveySubSite(models.Model):
 
     priority = models.IntegerField(
         default=1,
-        # unique=True,
         help_text="Priority of subsite (lower number = higher priority)"
     )
 
-    # ✅ OPTIONAL RINEX FILE
     rinex_file = models.FileField(
         upload_to="rinex_files/",
         null=True,
         blank=True
     )
+
     contact_details = models.CharField(max_length=255, blank=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
