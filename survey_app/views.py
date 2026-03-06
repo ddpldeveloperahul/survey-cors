@@ -242,6 +242,7 @@ class SurveyFullDataAPI(APIView):
                 "subsite_id": str(subsite.id),
                 "subsite_name": subsite.location,
                 "priority": subsite.priority,
+                "status": subsite.status,
                 "rinex_file": subsite.rinex_file.url if subsite.rinex_file else None,
 
                 "location": SurveyLocationSerializer(
@@ -398,6 +399,140 @@ class SurveyListByUserAPI(APIView):
 #             },
 #             status=status.HTTP_200_OK
 #         )
+# class SurveySubmitAPI(APIView):
+#     permission_classes = [IsAuthenticated]
+
+#     @transaction.atomic
+#     def post(self, request, survey_id):
+
+#         survey = get_object_or_404(
+#             Survey,
+#             id=survey_id,
+#             surveyor=request.user
+#         )
+
+#         # ✅ Allow only DRAFT or REJECTED
+#         if survey.status not in ["DRAFT", "REJECTED"]:
+#             return Response(
+#                 {
+#                     "error": f"Survey cannot be submitted in current state ({survey.status})"
+#                 },
+#                 status=status.HTTP_400_BAD_REQUEST
+#             )
+
+#         subsites = survey.subsites.all()
+
+#         # ✅ Subsite existence check
+#         if not subsites.exists():
+#             return Response(
+#                 {"error": "No subsites found"},
+#                 status=status.HTTP_400_BAD_REQUEST
+#             )
+
+#         # ==========================================
+#         # ✅ 1️⃣ DUPLICATE PRIORITY CHECK
+#         # ==========================================
+
+#         priorities = list(subsites.values_list("priority", flat=True))
+
+#         seen = set()
+#         duplicates = set()
+
+#         for p in priorities:
+#             if p in seen:
+#                 duplicates.add(p)
+#             seen.add(p)
+
+#         if duplicates:
+#             return Response(
+#                 {
+#                     "error": "Duplicate priority not allowed",
+#                     "duplicate_priorities": list(duplicates)
+#                 },
+#                 status=status.HTTP_400_BAD_REQUEST
+#             )
+
+#         # ==========================================
+#         # ✅ 2️⃣ REQUIRED DATA VALIDATION
+#         # ==========================================
+
+#         incomplete_subsites = []
+
+#         for subsite in subsites:
+#             missing = []
+
+#             if not hasattr(subsite, "surveylocation"):
+#                 missing.append("Location")
+
+#             if not hasattr(subsite, "surveymonument"):
+#                 missing.append("Monument")
+
+#             if not hasattr(subsite, "surveyskyvisibility"):
+#                 missing.append("Sky Visibility")
+
+#             if not hasattr(subsite, "surveypower"):
+#                 missing.append("Power")
+
+#             if not hasattr(subsite, "surveyconnectivity"):
+#                 missing.append("Connectivity")
+
+#             # ✅ Photos check
+#             try:
+#                 photos = subsite.photos
+#             except SurveyPhoto.DoesNotExist:
+#                 photos = None
+
+#             if not photos:
+#                 missing.append("Photos")
+#             else:
+#                 if not all([
+#                     photos.north_photo,
+#                     photos.east_photo,
+#                     photos.south_photo,
+#                     photos.west_photo
+#                 ]):
+#                     missing.append("All 4 directional photos required")
+
+#             if missing:
+#                 incomplete_subsites.append({
+#                     "subsite_id": str(subsite.id),
+#                     "subsite_name": subsite.location,
+#                     "missing": missing
+#                 })
+
+#         # ❌ Validation failed
+#         if incomplete_subsites:
+#             return Response(
+#                 {
+#                     "error": "Survey cannot be submitted",
+#                     "current_status": survey.status,
+#                     "incomplete_subsites": incomplete_subsites
+#                 },
+#                 status=status.HTTP_400_BAD_REQUEST
+#             )
+
+#         # ==========================================
+#         # ✅ 3️⃣ FINAL SUBMIT
+#         # ==========================================
+
+#         survey.status = "SUBMITTED"
+
+#         # Clear rejection reason if exists
+#         if hasattr(survey, "rejection_reason"):
+#             survey.rejection_reason = None
+
+#         survey.save(update_fields=["status"])
+
+#         return Response(
+#             {
+#                 "message": "Survey submitted successfully",
+#                 "survey_id": survey.id,
+#                 "status": survey.status
+#             },
+#             status=status.HTTP_200_OK
+#         )
+
+
 class SurveySubmitAPI(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -410,7 +545,7 @@ class SurveySubmitAPI(APIView):
             surveyor=request.user
         )
 
-        # ✅ Allow only DRAFT or REJECTED
+        # Allow only DRAFT or REJECTED
         if survey.status not in ["DRAFT", "REJECTED"]:
             return Response(
                 {
@@ -421,17 +556,15 @@ class SurveySubmitAPI(APIView):
 
         subsites = survey.subsites.all()
 
-        # ✅ Subsite existence check
         if not subsites.exists():
             return Response(
                 {"error": "No subsites found"},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # ==========================================
-        # ✅ 1️⃣ DUPLICATE PRIORITY CHECK
-        # ==========================================
-
+        # ===============================
+        # 1️⃣ Duplicate Priority Check
+        # ===============================
         priorities = list(subsites.values_list("priority", flat=True))
 
         seen = set()
@@ -451,10 +584,9 @@ class SurveySubmitAPI(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # ==========================================
-        # ✅ 2️⃣ REQUIRED DATA VALIDATION
-        # ==========================================
-
+        # ===============================
+        # 2️⃣ Required Data Validation
+        # ===============================
         incomplete_subsites = []
 
         for subsite in subsites:
@@ -475,11 +607,7 @@ class SurveySubmitAPI(APIView):
             if not hasattr(subsite, "surveyconnectivity"):
                 missing.append("Connectivity")
 
-            # ✅ Photos check
-            try:
-                photos = subsite.photos
-            except SurveyPhoto.DoesNotExist:
-                photos = None
+            photos = getattr(subsite, "photos", None)
 
             if not photos:
                 missing.append("Photos")
@@ -499,7 +627,6 @@ class SurveySubmitAPI(APIView):
                     "missing": missing
                 })
 
-        # ❌ Validation failed
         if incomplete_subsites:
             return Response(
                 {
@@ -510,17 +637,18 @@ class SurveySubmitAPI(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # ==========================================
-        # ✅ 3️⃣ FINAL SUBMIT
-        # ==========================================
-
+        # ===============================
+        # 3️⃣ Final Submit
+        # ===============================
         survey.status = "SUBMITTED"
 
-        # Clear rejection reason if exists
         if hasattr(survey, "rejection_reason"):
             survey.rejection_reason = None
 
         survey.save(update_fields=["status"])
+
+        # 🔥 IMPORTANT: Update all subsites status
+        subsites.update(status="SUBMITTED")
 
         return Response(
             {
@@ -530,6 +658,7 @@ class SurveySubmitAPI(APIView):
             },
             status=status.HTTP_200_OK
         )
+
 
 class SurveySubSiteCreateAPI(APIView):
 
@@ -1073,6 +1202,387 @@ class SurveyApprovalAPI(APIView):
         )
 
      
+     
+# ___________________________________________________________________
+
+class SurveySubmitAPI_local(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @transaction.atomic
+    def post(self, request, survey_id):
+
+        survey = get_object_or_404(Survey, id=survey_id, surveyor=request.user)
+
+        if survey.status != "DRAFT":
+            return Response({"error": "Only draft survey can be submitted"}, status=400)
+
+        subsites = survey.subsites.all()
+
+        if not subsites.exists():
+            return Response({"error": "Add at least one subsite"}, status=400)
+
+        survey.status = "SUBMITTED"
+        survey.save()
+
+        subsites.update(status="SUBMITTED")
+
+        return Response({"message": "Survey submitted successfully"})
+
+
+
+class SupervisorApprovalAPI(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @transaction.atomic
+    def post(self, request, survey_id):
+
+        survey = get_object_or_404(Survey, id=survey_id)
+
+        decision = request.data.get("decision")
+        remarks = request.data.get("remarks", "")
+
+        if survey.status != "SUBMITTED":
+            return Response({"error": "Invalid state"}, status=400)
+
+        if decision == "APPROVE":
+            survey.status = "SUPERVISOR_APPROVED"
+            survey.subsites.update(status="SUPERVISOR_APPROVED")
+            db_decision = "APPROVED"
+
+        elif decision == "REJECT":
+            survey.status = "REJECTED"
+            survey.subsites.update(status="REJECTED")
+            db_decision = "REJECTED"
+
+        else:
+            return Response({"error": "Invalid decision"}, status=400)
+
+        survey.save()
+
+        SurveyApproval.objects.create(
+            survey=survey,
+            approval_level=1,
+            approved_by=request.user,
+            decision=db_decision,
+            remarks=remarks
+        )
+
+        return Response({"message": "Supervisor decision saved"})
+
+class DirectorSubsiteDecisionAPI(APIView):
+    permission_classes = [IsAuthenticated]
+    @transaction.atomic
+    def post(self, request, subsite_id):
+
+        subsite = get_object_or_404(SurveySubSite, id=subsite_id)
+        survey = subsite.survey
+
+        decision = request.data.get("decision")
+        remarks = request.data.get("remarks", "")
+
+        if subsite.status != "SUPERVISOR_APPROVED":
+            return Response({"error": "Invalid state"}, status=400)
+
+        if decision == "APPROVE":
+            subsite.status = "DIRECTOR_APPROVED"
+            db_decision = "APPROVED"
+
+        elif decision == "REJECT":
+            subsite.status = "REJECTED_BY_DIRECTOR"
+            db_decision = "REJECTED"
+
+        else:
+            return Response({"error": "Invalid decision"}, status=400)
+
+        subsite.save()
+
+        SurveyApproval.objects.create(
+            survey=survey,
+            subsite=subsite,
+            approval_level=2,
+            approved_by=request.user,
+            decision=db_decision,
+            remarks=remarks
+        )
+
+        return Response({"message": "Director decision saved"})
+
+
+class DirectorSendToZonalAPI(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @transaction.atomic
+    def post(self, request, subsite_id):
+
+        subsite = get_object_or_404(SurveySubSite, id=subsite_id)
+        survey = subsite.survey
+
+        # Only director-approved subsites can be sent to zonal
+        if subsite.status != "DIRECTOR_APPROVED":
+            return Response({
+                "error": f"Invalid state. Current status is {subsite.status}"
+            }, status=400)
+
+        # Ensure only ONE subsite of a survey is sent to zonal at a time
+        already_sent = SurveySubSite.objects.filter(
+            survey=survey,
+            status="SENT_TO_ZONAL"
+        ).exclude(id=subsite.id).exists()
+
+        if already_sent:
+            return Response({
+                "error": "Another subsite from this survey is already sent to Zonal"
+            }, status=400)
+
+        # Update status
+        subsite.status = "SENT_TO_ZONAL"
+        subsite.save()
+
+        return Response({
+            "message": "Subsite successfully sent to Zonal Chief"
+        })
+class ZonalDecisionAPI(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    @transaction.atomic
+    def post(self, request, subsite_id):
+
+        subsite = get_object_or_404(SurveySubSite, id=subsite_id)
+        survey = subsite.survey
+
+        decision = request.data.get("decision")
+        remarks = request.data.get("remarks", "")
+
+        if subsite.status != "SENT_TO_ZONAL":
+            return Response({"error": "Invalid state"}, status=400)
+
+        if decision == "APPROVE":
+            subsite.status = "SENT_TO_GNRB"
+            db_decision = "APPROVED"
+
+        elif decision == "REJECT":
+            subsite.status = "REJECTED_BY_ZONAL"
+            db_decision = "REJECTED"
+
+        else:
+            return Response({"error": "Invalid decision"}, status=400)
+
+        subsite.save()
+
+        SurveyApproval.objects.create(
+            survey=survey,
+            subsite=subsite,
+            approval_level=3,
+            approved_by=request.user,
+            decision=db_decision,
+            remarks=remarks
+        )
+
+        return Response({"message": "Zonal decision saved"})
+
+
+class GNRBDecisionAPI(APIView):
+    permission_classes = [IsAuthenticated]
+    @transaction.atomic
+    def post(self, request, subsite_id):
+
+        subsite = get_object_or_404(SurveySubSite, id=subsite_id)
+        survey = subsite.survey
+
+        decision = request.data.get("decision")
+        remarks = request.data.get("remarks", "")
+
+        if subsite.status != "SENT_TO_GNRB":
+            return Response({"error": "Invalid state"}, status=400)
+
+        if decision == "APPROVE":
+            subsite.status = "FINAL_APPROVED"
+            survey.status = "GNRB_APPROVED"
+            db_decision = "APPROVED"
+
+        elif decision == "REJECT":
+            subsite.status = "REJECTED_BY_GNRB"
+            db_decision = "REJECTED"
+
+        else:
+            return Response({"error": "Invalid decision"}, status=400)
+
+        subsite.save()
+        survey.save()
+
+        SurveyApproval.objects.create(
+            survey=survey,
+            subsite=subsite,
+            approval_level=4,
+            approved_by=request.user,
+            decision=db_decision,
+            remarks=remarks
+        )
+
+        return Response({"message": "Final decision saved"})
+
+class SupervisorSurveyListAPI(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+
+        if request.user.role != "SUPERVISOR":
+            return Response({"error": "Unauthorized"}, status=403)
+
+        surveys = Survey.objects.filter(
+            status__in=[
+                "SUBMITTED",
+                "SUPERVISOR_APPROVED",
+                "REJECTED",
+                "GNRB_APPROVED"
+            ]
+        ).select_related(
+            "station",
+            "surveyor"
+        )
+
+        serializer = SurveySerializer(surveys, many=True)
+
+        return Response(serializer.data) 
+    
+class DirectorSubsiteListAPI(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+
+        if request.user.role != "DIRECTOR":
+            return Response({"error": "Unauthorized"}, status=403)
+
+        subsites = SurveySubSite.objects.filter(
+            status__in=[
+                "SUPERVISOR_APPROVED",
+                "DIRECTOR_APPROVED",
+                "SENT_TO_ZONAL",
+                "SENT_TO_GNRB",
+                "REJECTED_BY_DIRECTOR",
+                "REJECTED_BY_ZONAL",
+                "FINAL_APPROVED"
+            ]
+        ).select_related(
+            "survey",
+            "survey__station",
+            "survey__surveyor"
+        ).prefetch_related(
+            "surveylocation",
+            "surveymonument",
+            "surveyskyvisibility",
+            "surveypower",
+            "surveyconnectivity",
+            "photos"
+        )
+
+        serializer = DirectorSubsiteSerializer(subsites, many=True)
+        return Response(serializer.data)
+    
+class ZonalSubsiteListAPI(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+
+        if request.user.role != "ZONAL_CHIEF":
+            return Response({"error": "Unauthorized"}, status=403)
+
+        subsites = SurveySubSite.objects.filter(
+            status__in=[
+                "SENT_TO_ZONAL",
+                "SENT_TO_GNRB",
+                "FINAL_APPROVED",
+                "REJECTED_BY_ZONAL"
+            ]
+        ).select_related(
+            "survey",
+            "survey__station",
+            "survey__surveyor"
+        ).prefetch_related(
+            "surveylocation",
+            "surveymonument",
+            "surveyskyvisibility",
+            "surveypower",
+            "surveyconnectivity",
+            "photos"
+        )
+
+        serializer = ZonalSubsiteSerializer(subsites, many=True)
+        return Response(serializer.data)
+    
+    
+# class GNRBSubsiteListAPI(APIView):
+#     permission_classes = [IsAuthenticated]
+
+#     def get(self, request):
+
+#         if request.user.role != "GNRB":
+#             return Response({"error": "Unauthorized"}, status=403)
+
+#         subsites = SurveySubSite.objects.filter(
+#             status__in=[
+#                 "SENT_TO_GNRB",
+#                 "FINAL_APPROVED",
+#                 "REJECTED_BY_GNRB"
+#             ]
+#         ).select_related("survey")
+
+#         serializer = SurveySubSiteSerializer(subsites, many=True)
+#         return Response(serializer.data)
+    
+# class GNRBSubsiteListAPI(APIView):
+#     permission_classes = [IsAuthenticated]
+
+#     def get(self, request):
+
+#         if request.user.role != "GNRB":
+#             return Response({"error": "Unauthorized"}, status=403)
+
+#         subsites = SurveySubSite.objects.filter(
+#             status__in=[
+#                 "SENT_TO_GNRB",
+#                 "FINAL_APPROVED",
+#                 "REJECTED_BY_GNRB"
+#             ]
+#         ).select_related("survey").prefetch_related(
+#             "surveylocation",
+#             "surveymonument"
+#         )
+
+#         serializer = SurveySubSiteSerializer(subsites, many=True)
+#         return Response(serializer.data)
+
+class GNRBSubsiteListAPI(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+
+        if request.user.role != "GNRB":
+            return Response({"error": "Unauthorized"}, status=403)
+
+        subsites = SurveySubSite.objects.filter(
+            status__in=[
+                "SENT_TO_GNRB",
+                "FINAL_APPROVED",
+                "REJECTED_BY_GNRB"
+            ]
+        ).select_related(
+            "survey",
+            "survey__station",
+            "survey__surveyor"
+        ).prefetch_related(
+            "surveylocation",
+            "surveymonument",
+            "surveyskyvisibility",
+            "surveypower",
+            "surveyconnectivity",
+            "photos"
+        )
+
+        serializer = GNRBSubsiteSerializer(subsites, many=True)
+
+        return Response(serializer.data)
+#__________________________________________________________________     
 #Pending Survey List      
 class PendingSurveyAPI(APIView):
     permission_classes = [IsAuthenticated]

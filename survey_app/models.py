@@ -204,6 +204,25 @@ class SurveySubSite(models.Model):
         default=1,
         help_text="Priority of subsite (lower number = higher priority)"
     )
+    SUBSITE_STATUS_CHOICES = [
+    ("DRAFT", "Draft"),
+    ("SUBMITTED", "Submitted"),
+    ("SUPERVISOR_APPROVED", "Supervisor Approved"),
+    ("DIRECTOR_APPROVED", "Director Approved"),
+    ("REJECTED_BY_DIRECTOR", "Rejected by Director"),
+    ("SENT_TO_ZONAL", "Sent to Zonal Chief"),
+    ("REJECTED_BY_ZONAL", "Rejected by Zonal Chief"),
+    ("ZONAL_APPROVED", "Zonal Chief Approved"),
+    ("SENT_TO_GNRB", "Sent to GNRB"),
+    ("REJECTED_BY_GNRB", "Rejected by GNRB"),
+    ("FINAL_APPROVED", "Final Approved"),
+    ]
+
+    status = models.CharField(
+        max_length=30,
+        choices=SUBSITE_STATUS_CHOICES,
+        default="DRAFT"
+    )
 
     rinex_file = models.FileField(
         upload_to="rinex_files/",
@@ -425,6 +444,7 @@ class SurveyPhoto(models.Model):
         return f"Photos of {self.sub_site.location}"
 
 class SurveyApproval(models.Model):
+
     LEVEL_CHOICES = [
         (1, "Supervisor"),
         (2, "Director"),
@@ -432,20 +452,34 @@ class SurveyApproval(models.Model):
         (4, "GNRB"),
     ]
 
-    DECISION = [("APPROVED", "Approved"), 
-                ("REJECTED", "Rejected")
-                ]
+    DECISION = [
+        ("APPROVED", "Approved"),
+        ("REJECTED", "Rejected")
+    ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    survey = models.ForeignKey(Survey, on_delete=models.CASCADE)
+
+    survey = models.ForeignKey(
+        Survey,
+        on_delete=models.CASCADE
+    )
+
+    subsite = models.ForeignKey(
+        SurveySubSite,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True
+    )
+
     approval_level = models.IntegerField(choices=LEVEL_CHOICES)
+
     approved_by = models.ForeignKey(User, on_delete=models.CASCADE)
+
     decision = models.CharField(max_length=10, choices=DECISION)
+
     remarks = models.TextField()
+
     approved_at = models.DateTimeField(auto_now_add=True)
-    
-    def __str__(self):
-        return f"{self.survey.station} - Level {self.approval_level} - {self.decision}"
 
 
 

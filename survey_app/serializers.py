@@ -558,3 +558,268 @@ class StationdbSerializer(serializers.ModelSerializer):
             "longitude",
             "height",
         ]
+        
+        
+        
+        
+
+
+
+
+class DirectorSubsiteSerializer(serializers.ModelSerializer):
+
+    site_name = serializers.CharField(source="survey.station.name", read_only=True)
+    surveyor_name = serializers.CharField(source="survey.surveyor.username", read_only=True)
+
+    supervisor_name = serializers.SerializerMethodField()
+
+    location_details = SurveyLocationSerializer(
+        source="surveylocation",
+        read_only=True
+    )
+
+    monument_details = SurveyMonumentSerializer(
+        source="surveymonument",
+        read_only=True
+    )
+
+    sky_visibility = SurveySkyVisibilitySerializer(
+        source="surveyskyvisibility",
+        read_only=True
+    )
+
+    power_details = SurveyPowerSerializer(
+        source="surveypower",
+        read_only=True
+    )
+
+    connectivity_details = SurveyConnectivitySerializer(
+        source="surveyconnectivity",
+        read_only=True
+    )
+
+    photo_details = SurveyPhotoSerializer(
+        source="surveyphoto",
+        read_only=True
+    )
+
+    class Meta:
+        model = SurveySubSite
+        fields = [
+            "id",
+            "site_name",
+            "location",
+            "priority",
+            "status",
+            "rinex_file",
+            "contact_details",
+            "surveyor_name",
+            "supervisor_name",
+            "location_details",
+            "monument_details",
+            "sky_visibility",
+            "power_details",
+            "connectivity_details",
+            "photo_details",
+            "created_at"
+        ]
+
+    def get_supervisor_name(self, obj):
+
+        approval = SurveyApproval.objects.filter(
+            survey=obj.survey,
+            approval_level=1
+        ).select_related("approved_by").first()
+
+        if approval:
+            return approval.approved_by.username
+
+        return None
+    
+    
+class ZonalSubsiteSerializer(serializers.ModelSerializer):
+
+    site_name = serializers.CharField(source="survey.station.name", read_only=True)
+    surveyor_name = serializers.CharField(source="survey.surveyor.username", read_only=True)
+
+    supervisor_name = serializers.SerializerMethodField()
+    director_name = serializers.SerializerMethodField()
+
+    location_details = SurveyLocationSerializer(
+        source="surveylocation",
+        read_only=True
+    )
+
+    monument_details = SurveyMonumentSerializer(
+        source="surveymonument",
+        read_only=True
+    )
+
+    sky_visibility = SurveySkyVisibilitySerializer(
+        source="surveyskyvisibility",
+        read_only=True
+    )
+
+    power_details = SurveyPowerSerializer(
+        source="surveypower",
+        read_only=True
+    )
+
+    connectivity_details = SurveyConnectivitySerializer(
+        source="surveyconnectivity",
+        read_only=True
+    )
+
+    photo_details = SurveyPhotoSerializer(
+        source="surveyphoto",
+        read_only=True
+    )
+
+    class Meta:
+        model = SurveySubSite
+        fields = [
+            "id",
+            "site_name",
+            "location",
+            "priority",
+            "status",
+            "rinex_file",
+            "contact_details",
+            "surveyor_name",
+            "supervisor_name",
+            "director_name",
+            "location_details",
+            "monument_details",
+            "sky_visibility",
+            "power_details",
+            "connectivity_details",
+            "photo_details",
+            "created_at"
+        ]
+
+    def get_supervisor_name(self, obj):
+
+        approval = SurveyApproval.objects.filter(
+            survey=obj.survey,
+            approval_level=1
+        ).select_related("approved_by").first()
+
+        if approval:
+            return approval.approved_by.username
+
+        return None
+
+
+    def get_director_name(self, obj):
+
+        approval = SurveyApproval.objects.filter(
+            subsite=obj,
+            approval_level=2
+        ).select_related("approved_by").first()
+
+        if approval:
+            return approval.approved_by.username
+
+        return None
+    
+    
+class GNRBSubsiteSerializer(serializers.ModelSerializer):
+
+    site_name = serializers.CharField(source="survey.station.name", read_only=True)
+    surveyor_name = serializers.CharField(source="survey.surveyor.username", read_only=True)
+
+    supervisor_name = serializers.SerializerMethodField()
+    director_name = serializers.SerializerMethodField()
+    zonal_chief_name = serializers.SerializerMethodField()
+
+    location_details = SurveyLocationSerializer(
+        source="surveylocation",
+        read_only=True
+    )
+
+    monument_details = SurveyMonumentSerializer(
+        source="surveymonument",
+        read_only=True
+    )
+
+    sky_visibility = SurveySkyVisibilitySerializer(
+        source="surveyskyvisibility",
+        read_only=True
+    )
+
+    power_details = SurveyPowerSerializer(
+        source="surveypower",
+        read_only=True
+    )
+
+    connectivity_details = SurveyConnectivitySerializer(
+        source="surveyconnectivity",
+        read_only=True
+    )
+
+    photo_details = SurveyPhotoSerializer(
+        source="surveyphoto",
+        read_only=True
+    )
+
+    class Meta:
+        model = SurveySubSite
+        fields = [
+            "id",
+            "site_name",
+            "location",
+            "priority",
+            "status",
+            "rinex_file",
+            "contact_details",
+            "surveyor_name",
+            "supervisor_name",
+            "director_name",
+            "zonal_chief_name",
+            "location_details",
+            "monument_details",
+            "sky_visibility",
+            "power_details",
+            "connectivity_details",
+            "photo_details",
+            "created_at"
+        ]
+
+
+    def get_supervisor_name(self, obj):
+
+        approval = SurveyApproval.objects.filter(
+            survey=obj.survey,
+            approval_level=1
+        ).select_related("approved_by").first()
+
+        if approval:
+            return approval.approved_by.username
+
+        return None
+
+
+    def get_director_name(self, obj):
+
+        approval = SurveyApproval.objects.filter(
+            subsite=obj,
+            approval_level=2
+        ).select_related("approved_by").first()
+
+        if approval:
+            return approval.approved_by.username
+
+        return None
+
+
+    def get_zonal_chief_name(self, obj):
+
+        approval = SurveyApproval.objects.filter(
+            subsite=obj,
+            approval_level=3
+        ).select_related("approved_by").first()
+
+        if approval:
+            return approval.approved_by.username
+
+        return None
