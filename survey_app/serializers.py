@@ -587,6 +587,8 @@ class SupervisorSubsiteSerializer(serializers.ModelSerializer):
 class SupervisorSurveySerializer(serializers.ModelSerializer):
 
     site_name = serializers.CharField(source="station.name", read_only=True)
+    latitude=serializers.CharField(source="station.latitude", read_only=True)
+    longitude=serializers.CharField(source="station.longitude", read_only=True)
     surveyor_name = serializers.CharField(source="surveyor.username", read_only=True)
 
     subsites = SupervisorSubsiteSerializer(many=True, read_only=True)
@@ -596,6 +598,8 @@ class SupervisorSurveySerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "site_name",
+            "latitude",
+            "longitude",
             "status",
             "surveyor_name",
             "remarks",
@@ -606,6 +610,8 @@ class SupervisorSurveySerializer(serializers.ModelSerializer):
 class DirectorSubsiteSerializer(serializers.ModelSerializer):
 
     site_name = serializers.CharField(source="survey.station.name", read_only=True)
+    latitude=serializers.CharField(source="survey.station.latitude", read_only=True)
+    longitude=serializers.CharField(source="survey.station.longitude", read_only=True)
     surveyor_name = serializers.CharField(source="survey.surveyor.username", read_only=True)
 
     supervisor_name = serializers.SerializerMethodField()
@@ -645,6 +651,8 @@ class DirectorSubsiteSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "site_name",
+            "latitude",
+            "longitude",
             "location",
             "priority",
             "status",
@@ -677,6 +685,8 @@ class DirectorSubsiteSerializer(serializers.ModelSerializer):
 class ZonalSubsiteSerializer(serializers.ModelSerializer):
 
     site_name = serializers.CharField(source="survey.station.name", read_only=True)
+    latitude=serializers.CharField(source="survey.station.latitude", read_only=True)
+    longitude=serializers.CharField(source="survey.station.longitude", read_only=True)
     surveyor_name = serializers.CharField(source="survey.surveyor.username", read_only=True)
 
     supervisor_name = serializers.SerializerMethodField()
@@ -717,6 +727,8 @@ class ZonalSubsiteSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "site_name",
+            "latitude",
+            "longitude",
             "location",
             "priority",
             "status",
@@ -763,6 +775,8 @@ class ZonalSubsiteSerializer(serializers.ModelSerializer):
 class GNRBSubsiteSerializer(serializers.ModelSerializer):
 
     site_name = serializers.CharField(source="survey.station.name", read_only=True)
+    latitude=serializers.CharField(source="survey.station.latitude", read_only=True)
+    longitude=serializers.CharField(source="survey.station.longitude", read_only=True)
     surveyor_name = serializers.CharField(source="survey.surveyor.username", read_only=True)
 
     supervisor_name = serializers.SerializerMethodField()
@@ -804,6 +818,8 @@ class GNRBSubsiteSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "site_name",
+            "latitude",
+            "longitude",
             "location",
             "priority",
             "status",
