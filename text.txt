@@ -180,3 +180,11 @@ https://survey.drdesigntech.com/api/forgot-password/
 {
   "email":"rahuulkumar23@gmail.com"
 }
+
+
+https://survey.drdesigntech.com/api/subsite/c2982256-09e9-4891-8d2d-24aa82e342b8/director-decision/
+
+{
+  "decision": "APPROVE",
+  "remarks": "Director approved"
+}

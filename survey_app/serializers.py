@@ -486,8 +486,6 @@ class FullHierarchySurveySerializer(serializers.ModelSerializer):
         
         
 
-from .models import State, District, SubDistrict, Town
-
 class TownSerializer(serializers.ModelSerializer):
     name = serializers.SerializerMethodField()
 
@@ -526,7 +524,7 @@ class StateSerializer(serializers.ModelSerializer):
 
 
 
-from survey_app.models import Districtdb
+
 
 
 class DistrictdbSerializer(serializers.ModelSerializer):
@@ -540,9 +538,6 @@ class DistrictdbSerializer(serializers.ModelSerializer):
             "longitude",
         ]
         
-        
-from rest_framework import serializers
-from survey_app.models import Stationdb
 
 
 class StationdbSerializer(serializers.ModelSerializer):
@@ -561,10 +556,52 @@ class StationdbSerializer(serializers.ModelSerializer):
         
         
         
+
+class SupervisorSubsiteSerializer(serializers.ModelSerializer):
+
+    location_details = SurveyLocationSerializer(source="surveylocation", read_only=True)
+    monument_details = SurveyMonumentSerializer(source="surveymonument", read_only=True)
+    sky_visibility = SurveySkyVisibilitySerializer(source="surveyskyvisibility", read_only=True)
+    power_details = SurveyPowerSerializer(source="surveypower", read_only=True)
+    connectivity_details = SurveyConnectivitySerializer(source="surveyconnectivity", read_only=True)
+    photo_details = SurveyPhotoSerializer(source="photos", read_only=True)
+
+    class Meta:
+        model = SurveySubSite
+        fields = [
+            "id",
+            "location",
+            "priority",
+            "status",
+            "rinex_file",
+            "contact_details",
+            "location_details",
+            "monument_details",
+            "sky_visibility",
+            "power_details",
+            "connectivity_details",
+            "photo_details",
+            "created_at"
+        ]
         
+class SupervisorSurveySerializer(serializers.ModelSerializer):
 
+    site_name = serializers.CharField(source="station.name", read_only=True)
+    surveyor_name = serializers.CharField(source="surveyor.username", read_only=True)
 
+    subsites = SupervisorSubsiteSerializer(many=True, read_only=True)
 
+    class Meta:
+        model = Survey
+        fields = [
+            "id",
+            "site_name",
+            "status",
+            "surveyor_name",
+            "remarks",
+            "created_at",
+            "subsites"
+        ]
 
 class DirectorSubsiteSerializer(serializers.ModelSerializer):
 
@@ -599,8 +636,8 @@ class DirectorSubsiteSerializer(serializers.ModelSerializer):
     )
 
     photo_details = SurveyPhotoSerializer(
-        source="surveyphoto",
-        read_only=True
+    source="photos",
+    read_only=True
     )
 
     class Meta:
@@ -671,8 +708,8 @@ class ZonalSubsiteSerializer(serializers.ModelSerializer):
     )
 
     photo_details = SurveyPhotoSerializer(
-        source="surveyphoto",
-        read_only=True
+    source="photos",
+    read_only=True
     )
 
     class Meta:
@@ -758,8 +795,8 @@ class GNRBSubsiteSerializer(serializers.ModelSerializer):
     )
 
     photo_details = SurveyPhotoSerializer(
-        source="surveyphoto",
-        read_only=True
+    source="photos",
+    read_only=True
     )
 
     class Meta:

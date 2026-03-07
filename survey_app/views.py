@@ -1439,11 +1439,19 @@ class SupervisorSurveyListAPI(APIView):
         ).select_related(
             "station",
             "surveyor"
+        ).prefetch_related(
+            "subsites",
+            "subsites__surveylocation",
+            "subsites__surveymonument",
+            "subsites__surveyskyvisibility",
+            "subsites__surveypower",
+            "subsites__surveyconnectivity",
+            "subsites__photos"
         )
 
-        serializer = SurveySerializer(surveys, many=True)
+        serializer = SupervisorSurveySerializer(surveys, many=True)
 
-        return Response(serializer.data) 
+        return Response(serializer.data)
     
 class DirectorSubsiteListAPI(APIView):
     permission_classes = [IsAuthenticated]
