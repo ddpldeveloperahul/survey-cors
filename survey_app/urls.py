@@ -1,3 +1,4 @@
+from django import views
 from django.urls import path
 from .views import *
 
@@ -6,8 +7,17 @@ from .views import *
 urlpatterns = [
     
     
-    path("signup/", SignupAPI.as_view(), name="signup"),
-    path("login/", LoginAPI.as_view(), name="login"),
+    path("signup/", SignupAPI.as_view()),
+    path("login/", LoginAPI.as_view()),
+
+    path("pending-supervisors/", PendingSupervisorsAPI.as_view()),
+    path("approve-supervisor/<uuid:user_id>/", ApproveSupervisorAPI.as_view()),
+
+    path("pending-surveyors/", PendingSurveyorsAPI.as_view()),
+    path("approve-surveyor/<uuid:user_id>/", ApproveSurveyorAPI.as_view()),
+
+    
+    
     path("forgot-password/", ForgotPasswordAPI.as_view()),
     path("reset-password/", ResetPasswordAPI.as_view()),
     path("logout/", LogoutAPI.as_view()),
@@ -70,8 +80,17 @@ urlpatterns = [
     path("survey/map/", SurveyMapDataAPI.as_view()),
     path("survey/map/<uuid:location_id>/", SurveyMapDataAPI.as_view()),
     path("map/", survey_map_view, name="survey-map"),
+    
+    
+    
     path("signup_front/", signup_view, name="signup"),
     path("login_front/", login_view, name="login"),
+    
+    
+    
+    
+    
+    
     path("logout/", logout_view, name="logout"),
     
     path("users/", AllUsersAPI.as_view(), name="all-users"),

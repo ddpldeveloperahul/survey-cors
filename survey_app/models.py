@@ -89,6 +89,7 @@ class User(AbstractUser):
 
     role = models.CharField(max_length=20, choices=ROLE_CHOICES)
     zone = models.CharField(max_length=20, choices=ZONE_CHOICES, blank=True)
+    is_approved = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     

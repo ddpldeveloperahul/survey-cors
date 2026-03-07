@@ -21,7 +21,45 @@ class ResetPasswordSerializer(serializers.Serializer):
             raise serializers.ValidationError("Passwords do not match")
 
         return data
+# class SignupSerializer(serializers.ModelSerializer):
+#     password = serializers.CharField(write_only=True)
+
+#     class Meta:
+#         model = User
+#         fields = [
+#             "username",
+#             "password",
+#             "name",
+#             "email",
+#             "mobile",
+#             "role",
+#             "zone",
+#         ]
+
+#     def create(self, validated_data):
+#         password = validated_data.pop("password")
+#         user = User(**validated_data)
+#         user.set_password(password)
+#         user.save()
+
+#         # 🔑 CREATE TOKEN
+#         Token.objects.create(user=user)
+
+#         return user
+
+
+from rest_framework import serializers
+from django.contrib.auth import authenticate
+from rest_framework.authtoken.models import Token
+from .models import User
+
+
+from rest_framework import serializers
+from rest_framework.authtoken.models import Token
+from .models import User
+
 class SignupSerializer(serializers.ModelSerializer):
+
     password = serializers.CharField(write_only=True)
 
     class Meta:
@@ -37,29 +75,80 @@ class SignupSerializer(serializers.ModelSerializer):
         ]
 
     def create(self, validated_data):
+
         password = validated_data.pop("password")
+
+        role = validated_data.get("role")
+
         user = User(**validated_data)
         user.set_password(password)
+
+        # 🔑 Director automatically approved
+        if role == "DIRECTOR":
+            user.is_approved = True
+        else:
+            user.is_approved = False
+
         user.save()
 
-        # 🔑 CREATE TOKEN
         Token.objects.create(user=user)
 
         return user
-    
+
+
 class LoginSerializer(serializers.Serializer):
+
     username = serializers.CharField()
-    password = serializers.CharField(write_only=True)
+    password = serializers.CharField()
 
     def validate(self, data):
+
         user = authenticate(
             username=data["username"],
             password=data["password"]
         )
+
         if not user:
             raise serializers.ValidationError("Invalid username or password")
+
+        if not user.is_approved:
+            raise serializers.ValidationError("Account not approved yet")
+
         data["user"] = user
+
         return data
+# class LoginSerializer(serializers.Serializer):
+#     username = serializers.CharField()
+#     password = serializers.CharField(write_only=True)
+
+#     def validate(self, data):
+#         user = authenticate(
+#             username=data["username"],
+#             password=data["password"]
+#         )
+#         if not user:
+#             raise serializers.ValidationError("Invalid username or password")
+#         data["user"] = user
+#         return data
+
+# class LoginSerializer(serializers.Serializer):
+#     username = serializers.CharField()
+#     password = serializers.CharField(write_only=True)
+
+#     def validate(self, data):
+#         user = authenticate(
+#             username=data["username"],
+#             password=data["password"]
+#         )
+
+#         if not user:
+#             raise serializers.ValidationError("Invalid username or password")
+
+#         if not user.is_approved:
+#             raise serializers.ValidationError("Account not approved yet")
+
+#         data["user"] = user
+#         return data
 
 class UserListSerializer(serializers.ModelSerializer):
     class Meta:

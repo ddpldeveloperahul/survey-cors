@@ -1,4 +1,4 @@
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, render,redirect
 from django.contrib.auth import get_user_model
 User = get_user_model()
 # Create your views here.
@@ -16,32 +16,143 @@ from django.core.mail import send_mail
 from django.conf import settings
 from .models import PasswordResetOTP
 from rest_framework.authentication import TokenAuthentication
+from django.contrib.auth import authenticate, login, logout    
 
 
+
+# class SignupAPI(APIView):
+#     permission_classes = [AllowAny]
+#     def post(self, request):
+#         serializer = SignupSerializer(data=request.data)
+#         serializer.is_valid(raise_exception=True)
+#         user = serializer.save()
+#         token = Token.objects.get(user=user)
+
+#         return Response({
+#             "message": "User registered successfully",
+#             "user_id": user.id,
+#             "username": user.username,
+#             "role": user.role,
+#             "token": token.key
+#         })
+
+# class LoginAPI(APIView):
+#     permission_classes = [AllowAny]
+#     def post(self, request):
+#         serializer = LoginSerializer(data=request.data)
+#         serializer.is_valid(raise_exception=True)
+
+#         user = serializer.validated_data["user"]
+#         token, _ = Token.objects.get_or_create(user=user)
+
+#         return Response({
+#             "message": "Login successful",
+#             "user_id": user.id,
+#             "username": user.username,
+#             "role": user.role,
+#             "token": token.key
+#         })
+
+from django.http import JsonResponse
+from .models import User
+import json
+from django.views.decorators.csrf import csrf_exempt
+from django.contrib.auth import authenticate, login
+from django.shortcuts import get_object_or_404
+from django.contrib.auth.decorators import login_required
+
+
+# ------------------ SIGNUP ------------------
+
+# @csrf_exempt
+# def signup_view(request):
+
+#     if request.method != "POST":
+#         return JsonResponse({"error": "POST method required"}, status=405)
+
+#     try:
+#         data = json.loads(request.body)
+
+#         user = User.objects.create_user(
+#             username=data["username"],
+#             password=data["password"],
+#             email=data["email"],
+#             name=data["name"],
+#             mobile=data["mobile"],
+#             role=data["role"],
+#             zone=data.get("zone", ""),
+#             is_approved=False
+#         )
+
+#         return JsonResponse({
+#             "message": "User registered successfully. Waiting for approval."
+#         })
+
+#     except Exception as e:
+#         return JsonResponse({"error": str(e)}, status=400)
 
 class SignupAPI(APIView):
+
     permission_classes = [AllowAny]
+
     def post(self, request):
+
         serializer = SignupSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+
         user = serializer.save()
+
         token = Token.objects.get(user=user)
 
         return Response({
-            "message": "User registered successfully",
+            "message": "User registered successfully. Waiting for approval.",
             "user_id": user.id,
             "username": user.username,
             "role": user.role,
             "token": token.key
         })
+# ------------------ LOGIN ------------------
 
+# @csrf_exempt
+# def login_view(request):
+
+#     if request.method != "POST":
+#         return JsonResponse({"error": "POST method required"}, status=405)
+
+#     try:
+#         data = json.loads(request.body)
+
+#         user = authenticate(
+#             username=data["username"],
+#             password=data["password"]
+#         )
+
+#         if user is None:
+#             return JsonResponse({"error": "Invalid credentials"}, status=400)
+
+#         if not user.is_approved:
+#             return JsonResponse({"error": "Account not approved yet"}, status=403)
+
+#         login(request, user)
+
+#         return JsonResponse({
+#             "message": "Login successful",
+#             "role": user.role
+#         })
+
+#     except Exception as e:
+#         return JsonResponse({"error": str(e)}, status=400)
 class LoginAPI(APIView):
+
     permission_classes = [AllowAny]
+
     def post(self, request):
+
         serializer = LoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         user = serializer.validated_data["user"]
+
         token, _ = Token.objects.get_or_create(user=user)
 
         return Response({
@@ -52,6 +163,100 @@ class LoginAPI(APIView):
             "token": token.key
         })
 
+# ------------------ PendingSurveyorsAPI SURVEYOR ------------------
+
+
+class PendingSurveyorsAPI(APIView):
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+
+        if request.user.role != "SUPERVISOR":
+            return Response({"error": "Only supervisor allowed"}, status=403)
+
+        surveyors = User.objects.filter(
+            role="SURVEYOR",
+            is_approved=False
+        )
+
+        data = [
+            {
+                "id": u.id,
+                "username": u.username,
+                "name": u.name,
+                "email": u.email
+            }
+            for u in surveyors
+        ]
+
+        return Response(data)
+
+# ------------------ APPROVE SUPERVISOR ------------------
+
+class ApproveSurveyorAPI(APIView):
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, user_id):
+
+        if request.user.role != "SUPERVISOR":
+            return Response({"error": "Only supervisor can approve"}, status=403)
+
+        surveyor = get_object_or_404(User, id=user_id, role="SURVEYOR")
+
+        surveyor.is_approved = True
+        surveyor.save()
+
+        return Response({
+            "message": "Surveyor approved successfully"
+        })
+
+
+class PendingSupervisorsAPI(APIView):
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+
+        if request.user.role != "DIRECTOR":
+            return Response({"error": "Only director allowed"}, status=403)
+
+        supervisors = User.objects.filter(
+            role="SUPERVISOR",
+            is_approved=False
+        )
+
+        data = [
+            {
+                "id": u.id,
+                "username": u.username,
+                "name": u.name,
+                "email": u.email
+            }
+            for u in supervisors
+        ]
+
+        return Response(data)
+
+
+class ApproveSupervisorAPI(APIView):
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, user_id):
+
+        if request.user.role != "DIRECTOR":
+            return Response({"error": "Only director can approve"}, status=403)
+
+        supervisor = get_object_or_404(User, id=user_id, role="SUPERVISOR")
+
+        supervisor.is_approved = True
+        supervisor.save()
+
+        return Response({
+            "message": "Supervisor approved successfully"
+        })
 
 
 class LogoutAPI(APIView):
@@ -1759,40 +1964,142 @@ class PendingSurveyAPI(APIView):
 
 
 
-from django.shortcuts import render, redirect
-from django.contrib.auth import login, logout
-from survey_app.forms import UserSignupForm, UserLoginForm
 
 
 # -------------------------
 # SIGNUP VIEW
 # -------------------------
+# def signup_view(request):
+#     if request.method == "POST":
+#         form = UserSignupForm(request.POST)
+#         if form.is_valid():
+#             user = form.save()
+#             login(request, user)   # auto login after signup
+#             return redirect("survey-map")
+#     else:
+#         form = UserSignupForm()
+
+#     return render(request, "signup.html", {"form": form})
+
+from django.http import JsonResponse
+from .models import User
+import json
+from django.views.decorators.csrf import csrf_exempt
+
+@csrf_exempt
 def signup_view(request):
     if request.method == "POST":
-        form = UserSignupForm(request.POST)
-        if form.is_valid():
-            user = form.save()
-            login(request, user)   # auto login after signup
-            return redirect("survey-map")
-    else:
-        form = UserSignupForm()
+        data = json.loads(request.body)
 
-    return render(request, "signup.html", {"form": form})
+        user = User.objects.create_user(
+            username=data["username"],
+            password=data["password"],
+            email=data["email"],
+            name=data["name"],
+            mobile=data["mobile"],
+            role=data["role"],
+            zone=data.get("zone", ""),
+            is_approved=False
+        )
+
+        return JsonResponse({
+            "message": "User registered successfully. Waiting for approval."
+        })
+    
+    
 
 
+from django.contrib.auth import authenticate, login, logout
+
+
+@csrf_exempt
+def login_view(request):
+    if request.method == "POST":
+        data = json.loads(request.body)
+
+        user = authenticate(
+            username=data["username"],
+            password=data["password"]
+        )
+
+        if user is None:
+            return JsonResponse({"error": "Invalid credentials"}, status=400)
+
+        if not user.is_approved:
+            return JsonResponse({"error": "Account not approved by Supervisor"}, status=403)
+
+        login(request, user)
+
+        return JsonResponse({
+            "message": "Login successful",
+            "role": user.role
+        })
+    
+from django.contrib.auth.decorators import login_required
+
+from django.views.decorators.csrf import csrf_exempt
+from django.shortcuts import get_object_or_404
+
+@csrf_exempt
+def approve_surveyor(request, user_id):
+
+    if request.user.role != "SUPERVISOR":
+        return JsonResponse({"error": "Only supervisor can approve surveyor"}, status=403)
+
+    user = get_object_or_404(User, id=user_id, role="SURVEYOR")
+
+    user.is_approved = True
+    user.save()
+
+    return JsonResponse({"message": "Surveyor approved"})
+
+@csrf_exempt
+def approve_supervisor(request, user_id):
+
+    if request.user.role != "DIRECTOR":
+        return JsonResponse({"error": "Only director can approve supervisor"}, status=403)
+
+    user = get_object_or_404(User, id=user_id, role="SUPERVISOR")
+
+    user.is_approved = True
+    user.save()
+
+    return JsonResponse({"message": "Supervisor approved"})
+
+def pending_surveyors(request):
+
+    if request.user.role != "SUPERVISOR":
+        return JsonResponse({"error": "Unauthorized"}, status=403)
+
+    users = User.objects.filter(role="SURVEYOR", is_approved=False)
+
+    data = list(users.values())
+
+    return JsonResponse(data, safe=False)
+
+def pending_supervisors(request):
+
+    if request.user.role != "DIRECTOR":
+        return JsonResponse({"error": "Unauthorized"}, status=403)
+
+    users = User.objects.filter(role="SUPERVISOR", is_approved=False)
+
+    data = list(users.values())
+
+    return JsonResponse(data, safe=False)
 # -------------------------
 # LOGIN VIEW
 # -------------------------
-def login_view(request):
-    if request.method == "POST":
-        form = UserLoginForm(request.POST)
-        if form.is_valid():
-            login(request, form.cleaned_data["user"])
-            return redirect("survey-map")
-    else:
-        form = UserLoginForm()
+# def login_view(request):
+#     if request.method == "POST":
+#         form = UserLoginForm(request.POST)
+#         if form.is_valid():
+#             login(request, form.cleaned_data["user"])
+#             return redirect("survey-map")
+#     else:
+#         form = UserLoginForm()
 
-    return render(request, "login.html", {"form": form})
+#     return render(request, "login.html", {"form": form})
 
 
 # -------------------------
