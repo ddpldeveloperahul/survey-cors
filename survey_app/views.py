@@ -1230,6 +1230,44 @@ class SurveySubmitAPI_local(APIView):
 
 
 
+# class SupervisorApprovalAPI(APIView):
+#     permission_classes = [IsAuthenticated]
+
+#     @transaction.atomic
+#     def post(self, request, survey_id):
+
+#         survey = get_object_or_404(Survey, id=survey_id)
+
+#         decision = request.data.get("decision")
+#         remarks = request.data.get("remarks", "")
+
+#         if survey.status != "SUBMITTED":
+#             return Response({"error": "Invalid state"}, status=400)
+
+#         if decision == "APPROVE":
+#             survey.status = "SUPERVISOR_APPROVED"
+#             survey.subsites.update(status="SUPERVISOR_APPROVED")
+#             db_decision = "APPROVED"
+
+#         elif decision == "REJECT":
+#             survey.status = "REJECTED"
+#             survey.subsites.update(status="REJECTED")
+#             db_decision = "REJECTED"
+
+#         else:
+#             return Response({"error": "Invalid decision"}, status=400)
+
+#         survey.save()
+
+#         SurveyApproval.objects.create(
+#             survey=survey,
+#             approval_level=1,
+#             approved_by=request.user,
+#             decision=db_decision,
+#             remarks=remarks
+#         )
+
+#         return Response({"message": "Supervisor decision saved"})
 class SupervisorApprovalAPI(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -1269,8 +1307,41 @@ class SupervisorApprovalAPI(APIView):
 
         return Response({"message": "Supervisor decision saved"})
 
+
+    # 🔵 UPDATE PRIORITY
+    @transaction.atomic
+    def put(self, request, survey_id):
+
+        if request.user.role != "SUPERVISOR":
+            return Response({"error": "Unauthorized"}, status=403)
+
+        subsite_id = request.data.get("subsite_id")
+        new_priority = request.data.get("priority")
+
+        subsite = get_object_or_404(SurveySubSite, id=subsite_id)
+
+        # duplicate check
+        if SurveySubSite.objects.filter(
+            survey=subsite.survey,
+            priority=new_priority
+        ).exclude(id=subsite.id).exists():
+
+            return Response(
+                {"error": "Priority already exists in this survey"},
+                status=400
+            )
+
+        subsite.priority = new_priority
+        subsite.save(update_fields=["priority"])
+
+        return Response({
+            "message": "Priority updated successfully",
+            "subsite_id": str(subsite.id),
+            "priority": new_priority
+        })
 class DirectorSubsiteDecisionAPI(APIView):
     permission_classes = [IsAuthenticated]
+
     @transaction.atomic
     def post(self, request, subsite_id):
 
@@ -1306,6 +1377,78 @@ class DirectorSubsiteDecisionAPI(APIView):
         )
 
         return Response({"message": "Director decision saved"})
+
+
+    # 🔵 UPDATE PRIORITY
+    @transaction.atomic
+    def put(self, request, subsite_id):
+
+        if request.user.role != "DIRECTOR":
+            return Response({"error": "Unauthorized"}, status=403)
+
+        subsite = get_object_or_404(SurveySubSite, id=subsite_id)
+
+        new_priority = request.data.get("priority")
+
+        if not new_priority:
+            return Response({"error": "Priority required"}, status=400)
+
+        # duplicate priority check
+        if SurveySubSite.objects.filter(
+            survey=subsite.survey,
+            priority=new_priority
+        ).exclude(id=subsite.id).exists():
+
+            return Response(
+                {"error": "Priority already exists in this survey"},
+                status=400
+            )
+
+        subsite.priority = new_priority
+        subsite.save(update_fields=["priority"])
+
+        return Response({
+            "message": "Priority updated by Director",
+            "subsite_id": str(subsite.id),
+            "priority": new_priority
+        })
+# class DirectorSubsiteDecisionAPI(APIView):
+#     permission_classes = [IsAuthenticated]
+#     @transaction.atomic
+#     def post(self, request, subsite_id):
+
+#         subsite = get_object_or_404(SurveySubSite, id=subsite_id)
+#         survey = subsite.survey
+
+#         decision = request.data.get("decision")
+#         remarks = request.data.get("remarks", "")
+
+#         if subsite.status != "SUPERVISOR_APPROVED":
+#             return Response({"error": "Invalid state"}, status=400)
+
+#         if decision == "APPROVE":
+#             subsite.status = "DIRECTOR_APPROVED"
+#             db_decision = "APPROVED"
+
+#         elif decision == "REJECT":
+#             subsite.status = "REJECTED_BY_DIRECTOR"
+#             db_decision = "REJECTED"
+
+#         else:
+#             return Response({"error": "Invalid decision"}, status=400)
+
+#         subsite.save()
+
+#         SurveyApproval.objects.create(
+#             survey=survey,
+#             subsite=subsite,
+#             approval_level=2,
+#             approved_by=request.user,
+#             decision=db_decision,
+#             remarks=remarks
+#         )
+
+#         return Response({"message": "Director decision saved"})
 
 
 class DirectorSendToZonalAPI(APIView):
