@@ -1801,6 +1801,41 @@ class SupervisorSurveyListAPI(APIView):
 
         return Response(serializer.data)
     
+# class DirectorSubsiteListAPI(APIView):
+#     permission_classes = [IsAuthenticated]
+
+#     def get(self, request):
+
+#         if request.user.role != "DIRECTOR":
+#             return Response({"error": "Unauthorized"}, status=403)
+
+#         subsites = SurveySubSite.objects.filter(
+#             status__in=[
+#                 "SUPERVISOR_APPROVED",
+#                 "DIRECTOR_APPROVED",
+#                 "SENT_TO_ZONAL",
+#                 "SENT_TO_GNRB",
+#                 "REJECTED_BY_DIRECTOR",
+#                 "REJECTED_BY_ZONAL",
+#                 "FINAL_APPROVED"
+#             ]
+#         ).select_related(
+#             "survey",
+#             "survey__station",
+#             "survey__surveyor"
+#         ).prefetch_related(
+#             "subsites",
+#             "subsites__surveylocation",
+#             "subsites__surveymonument",
+#             "subsites__surveyskyvisibility",
+#             "subsites__surveypower",
+#             "subsites__surveyconnectivity",
+#             "subsites__photos"
+#         )
+
+#         serializer = DirectorSubsiteSerializer(subsites, many=True)
+#         return Response(serializer.data)
+    
 class DirectorSubsiteListAPI(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -1809,32 +1844,32 @@ class DirectorSubsiteListAPI(APIView):
         if request.user.role != "DIRECTOR":
             return Response({"error": "Unauthorized"}, status=403)
 
-        subsites = SurveySubSite.objects.filter(
-            status__in=[
+        surveys = Survey.objects.filter(
+            subsites__status__in=[
                 "SUPERVISOR_APPROVED",
                 "DIRECTOR_APPROVED",
                 "SENT_TO_ZONAL",
                 "SENT_TO_GNRB",
+                "FINAL_APPROVED",
                 "REJECTED_BY_DIRECTOR",
-                "REJECTED_BY_ZONAL",
-                "FINAL_APPROVED"
+                "REJECTED_BY_ZONAL"
             ]
-        ).select_related(
-            "survey",
-            "survey__station",
-            "survey__surveyor"
+        ).distinct().select_related(
+            "station",
+            "surveyor"
         ).prefetch_related(
-            "surveylocation",
-            "surveymonument",
-            "surveyskyvisibility",
-            "surveypower",
-            "surveyconnectivity",
-            "photos"
+            "subsites__surveylocation",
+            "subsites__surveymonument",
+            "subsites__surveyskyvisibility",
+            "subsites__surveypower",
+            "subsites__surveyconnectivity",
+            "subsites__photos"
         )
 
-        serializer = DirectorSubsiteSerializer(subsites, many=True)
+        serializer = DirectorSurveySerializer(surveys, many=True)
         return Response(serializer.data)
-    
+
+
 class ZonalSubsiteListAPI(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -1843,29 +1878,27 @@ class ZonalSubsiteListAPI(APIView):
         if request.user.role != "ZONAL_CHIEF":
             return Response({"error": "Unauthorized"}, status=403)
 
-        subsites = SurveySubSite.objects.filter(
-            status__in=[
+        surveys = Survey.objects.filter(
+            subsites__status__in=[
                 "SENT_TO_ZONAL",
                 "SENT_TO_GNRB",
                 "FINAL_APPROVED",
                 "REJECTED_BY_ZONAL"
             ]
-        ).select_related(
-            "survey",
-            "survey__station",
-            "survey__surveyor"
+        ).distinct().select_related(
+            "station",
+            "surveyor"
         ).prefetch_related(
-            "surveylocation",
-            "surveymonument",
-            "surveyskyvisibility",
-            "surveypower",
-            "surveyconnectivity",
-            "photos"
+            "subsites__surveylocation",
+            "subsites__surveymonument",
+            "subsites__surveyskyvisibility",
+            "subsites__surveypower",
+            "subsites__surveyconnectivity",
+            "subsites__photos"
         )
 
-        serializer = ZonalSubsiteSerializer(subsites, many=True)
+        serializer = ZonalSurveySerializer(surveys, many=True)
         return Response(serializer.data)
-    
     
 # class GNRBSubsiteListAPI(APIView):
 #     permission_classes = [IsAuthenticated]
@@ -1908,7 +1941,9 @@ class ZonalSubsiteListAPI(APIView):
 #         serializer = SurveySubSiteSerializer(subsites, many=True)
 #         return Response(serializer.data)
 
+
 class GNRBSubsiteListAPI(APIView):
+
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -1916,28 +1951,61 @@ class GNRBSubsiteListAPI(APIView):
         if request.user.role != "GNRB":
             return Response({"error": "Unauthorized"}, status=403)
 
-        subsites = SurveySubSite.objects.filter(
-            status__in=[
+        surveys = Survey.objects.filter(
+            subsites__status__in=[
                 "SENT_TO_GNRB",
                 "FINAL_APPROVED",
                 "REJECTED_BY_GNRB"
             ]
-        ).select_related(
-            "survey",
-            "survey__station",
-            "survey__surveyor"
+        ).distinct().select_related(
+            "station",
+            "surveyor"
         ).prefetch_related(
-            "surveylocation",
-            "surveymonument",
-            "surveyskyvisibility",
-            "surveypower",
-            "surveyconnectivity",
-            "photos"
+            "subsites__surveylocation",
+            "subsites__surveymonument",
+            "subsites__surveyskyvisibility",
+            "subsites__surveypower",
+            "subsites__surveyconnectivity",
+            "subsites__photos"
         )
 
-        serializer = GNRBSubsiteSerializer(subsites, many=True)
+        serializer = GNRBSurveySerializer(surveys, many=True)
 
         return Response(serializer.data)
+# class GNRBSubsiteListAPI(APIView):
+#     permission_classes = [IsAuthenticated]
+
+#     def get(self, request):
+
+#         if request.user.role != "GNRB":
+#             return Response({"error": "Unauthorized"}, status=403)
+
+#         subsites = SurveySubSite.objects.filter(
+#             status__in=[
+#                 "SENT_TO_GNRB",
+#                 "FINAL_APPROVED",
+#                 "REJECTED_BY_GNRB"
+#             ]
+#         ).select_related(
+#             "survey",
+#             "survey__station",
+#             "survey__surveyor"
+#             "surveuy__supervisor",
+#             "survey__director",
+#             "survey_zonal_chief"
+#         ).prefetch_related(
+#             "subsites",
+#             "subsites__surveylocation",
+#             "subsites__surveymonument",
+#             "subsites__surveyskyvisibility",
+#             "subsites__surveypower",
+#             "subsites__surveyconnectivity",
+#             "subsites__photos"
+#         )
+
+#         serializer = GNRBSubsiteSerializer(subsites, many=True)
+
+#         return Response(serializer.data)
 #__________________________________________________________________     
 #Pending Survey List      
 class PendingSurveyAPI(APIView):

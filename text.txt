@@ -132,6 +132,14 @@ connectivity
 }
 
 #signup
+ROLE_CHOICES = [
+        ("SURVEYOR", "Surveyor"),
+        ("SUPERVISOR", "Supervisor"),
+        ("DIRECTOR", "Director"),
+        ("ZONAL_CHIEF", "Zonal Chief"),
+        ("GNRB", "GNRB Authority"),
+        ("ADMIN", "Admin"),
+    ]
 https://survey.drdesigntech.com/api/signup/
 {
     "username": "nakul",

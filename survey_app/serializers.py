@@ -83,8 +83,8 @@ class SignupSerializer(serializers.ModelSerializer):
         user = User(**validated_data)
         user.set_password(password)
 
-        # 🔑 Director automatically approved
-        if role == "DIRECTOR":
+        # 🔑 Director, GNRB, and Zonal Chief automatically approved
+        if role == "DIRECTOR" or role == "GNRB" or role == "ZONAL_CHIEF":
             user.is_approved = True
         else:
             user.is_approved = False
@@ -696,15 +696,9 @@ class SupervisorSurveySerializer(serializers.ModelSerializer):
             "subsites"
         ]
 
+
 class DirectorSubsiteSerializer(serializers.ModelSerializer):
 
-    site_name = serializers.CharField(source="survey.station.name", read_only=True)
-    latitude=serializers.CharField(source="survey.station.latitude", read_only=True)
-    longitude=serializers.CharField(source="survey.station.longitude", read_only=True)
-    surveyor_name = serializers.CharField(source="survey.surveyor.username", read_only=True)
-
-    supervisor_name = serializers.SerializerMethodField()
-
     location_details = SurveyLocationSerializer(
         source="surveylocation",
         read_only=True
@@ -733,22 +727,17 @@ class DirectorSubsiteSerializer(serializers.ModelSerializer):
     photo_details = SurveyPhotoSerializer(
     source="photos",
     read_only=True
-    )
+)
 
     class Meta:
         model = SurveySubSite
         fields = [
             "id",
-            "site_name",
-            "latitude",
-            "longitude",
             "location",
             "priority",
             "status",
             "rinex_file",
             "contact_details",
-            "surveyor_name",
-            "supervisor_name",
             "location_details",
             "monument_details",
             "sky_visibility",
@@ -757,11 +746,35 @@ class DirectorSubsiteSerializer(serializers.ModelSerializer):
             "photo_details",
             "created_at"
         ]
+class DirectorSurveySerializer(serializers.ModelSerializer):
+
+    site_name = serializers.CharField(source="station.name", read_only=True)
+    surveyor_name = serializers.CharField(source="surveyor.username", read_only=True)
+    longitude=serializers.CharField(source="station.longitude", read_only=True)
+    latitude=serializers.CharField(source="station.latitude", read_only=True)
+    supervisor_name = serializers.SerializerMethodField()
+    supervisor_name = serializers.SerializerMethodField()
+    subsites = DirectorSubsiteSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Survey
+        fields = [
+            "id",
+            "site_name",
+            "latitude",
+            "longitude",
+            "status",
+            "surveyor_name",
+            "supervisor_name",
+            "remarks",
+            "created_at",
+            "subsites"
+        ]
 
     def get_supervisor_name(self, obj):
 
         approval = SurveyApproval.objects.filter(
-            survey=obj.survey,
+            survey=obj,
             approval_level=1
         ).select_related("approved_by").first()
 
@@ -770,62 +783,137 @@ class DirectorSubsiteSerializer(serializers.ModelSerializer):
 
         return None
     
-    
+# class ZonalSubsiteSerializer(serializers.ModelSerializer):
+
+#     site_name = serializers.CharField(source="survey.station.name", read_only=True)
+#     latitude = serializers.CharField(source="survey.station.latitude", read_only=True)
+#     longitude = serializers.CharField(source="survey.station.longitude", read_only=True)
+
+#     surveyor_name = serializers.CharField(source="survey.surveyor.username", read_only=True)
+
+#     supervisor_name = serializers.SerializerMethodField()
+#     director_name = serializers.SerializerMethodField()
+
+#     location_details = SurveyLocationSerializer(
+#         source="surveylocation",
+#         read_only=True
+#     )
+
+#     monument_details = SurveyMonumentSerializer(
+#         source="surveymonument",
+#         read_only=True
+#     )
+
+#     sky_visibility = SurveySkyVisibilitySerializer(
+#         source="surveyskyvisibility",
+#         read_only=True
+#     )
+
+#     power_details = SurveyPowerSerializer(
+#         source="surveypower",
+#         read_only=True
+#     )
+
+#     connectivity_details = SurveyConnectivitySerializer(
+#         source="surveyconnectivity",
+#         read_only=True
+#     )
+
+#     photo_details = SurveyPhotoSerializer(
+#     source="photos",
+#     read_only=True
+#     )
+
+#     class Meta:
+#         model = SurveySubSite
+#         fields = [
+#             "id",
+#             "site_name",
+#             "latitude",
+#             "longitude",
+#             "location",
+#             "priority",
+#             "status",
+#             "rinex_file",
+#             "contact_details",
+#             "surveyor_name",
+#             "supervisor_name",
+#             "director_name",
+#             "location_details",
+#             "monument_details",
+#             "sky_visibility",
+#             "power_details",
+#             "connectivity_details",
+#             "photo_details",
+#             "created_at"
+#         ]
+
+#     def get_supervisor_name(self, obj):
+
+#         approval = SurveyApproval.objects.filter(
+#             survey=obj.survey,
+#             approval_level=1
+#         ).select_related("approved_by").first()
+
+#         if approval:
+#             return approval.approved_by.username
+
+#         return None
+
+
+#     def get_director_name(self, obj):
+
+#         approval = SurveyApproval.objects.filter(
+#             subsite=obj,
+#             approval_level=2
+#         ).select_related("approved_by").first()
+
+#         if approval:
+#             return approval.approved_by.username
+
+#         return None
 class ZonalSubsiteSerializer(serializers.ModelSerializer):
 
-    site_name = serializers.CharField(source="survey.station.name", read_only=True)
-    latitude=serializers.CharField(source="survey.station.latitude", read_only=True)
-    longitude=serializers.CharField(source="survey.station.longitude", read_only=True)
-    surveyor_name = serializers.CharField(source="survey.surveyor.username", read_only=True)
+    # Site information
+    # site_name = serializers.CharField(source="survey.station.name", read_only=True)
+    # latitude = serializers.CharField(source="survey.station.latitude", read_only=True)
+    # longitude = serializers.CharField(source="survey.station.longitude", read_only=True)
 
-    supervisor_name = serializers.SerializerMethodField()
-    director_name = serializers.SerializerMethodField()
+    # # Surveyor name
+    # surveyor_name = serializers.CharField(source="survey.surveyor.username", read_only=True)
 
-    location_details = SurveyLocationSerializer(
-        source="surveylocation",
-        read_only=True
-    )
+    # # Supervisor and Director name
+    # supervisor_name = serializers.SerializerMethodField()
+    # director_name = serializers.SerializerMethodField()
 
-    monument_details = SurveyMonumentSerializer(
-        source="surveymonument",
-        read_only=True
-    )
+    # Nested serializers (subsite related data)
+    location_details = SurveyLocationSerializer(source="surveylocation", read_only=True)
 
-    sky_visibility = SurveySkyVisibilitySerializer(
-        source="surveyskyvisibility",
-        read_only=True
-    )
+    monument_details = SurveyMonumentSerializer(source="surveymonument", read_only=True)
 
-    power_details = SurveyPowerSerializer(
-        source="surveypower",
-        read_only=True
-    )
+    sky_visibility = SurveySkyVisibilitySerializer(source="surveyskyvisibility", read_only=True)
 
-    connectivity_details = SurveyConnectivitySerializer(
-        source="surveyconnectivity",
-        read_only=True
-    )
+    power_details = SurveyPowerSerializer(source="surveypower", read_only=True)
 
-    photo_details = SurveyPhotoSerializer(
-    source="photos",
-    read_only=True
-    )
+    connectivity_details = SurveyConnectivitySerializer(source="surveyconnectivity", read_only=True)
+
+    photo_details = SurveyPhotoSerializer(source="photos", read_only=True)
 
     class Meta:
         model = SurveySubSite
         fields = [
             "id",
-            "site_name",
-            "latitude",
-            "longitude",
+            # "site_name",
+            # "latitude",
+            # "longitude",
             "location",
             "priority",
             "status",
             "rinex_file",
             "contact_details",
-            "surveyor_name",
-            "supervisor_name",
-            "director_name",
+            # "surveyor_name",
+            # "supervisor_name",
+            # "director_name",
             "location_details",
             "monument_details",
             "sky_visibility",
@@ -835,6 +923,7 @@ class ZonalSubsiteSerializer(serializers.ModelSerializer):
             "created_at"
         ]
 
+    # Supervisor name get
     def get_supervisor_name(self, obj):
 
         approval = SurveyApproval.objects.filter(
@@ -848,10 +937,66 @@ class ZonalSubsiteSerializer(serializers.ModelSerializer):
         return None
 
 
+    # Director name get
     def get_director_name(self, obj):
 
         approval = SurveyApproval.objects.filter(
             subsite=obj,
+            approval_level=2
+        ).select_related("approved_by").first()
+
+        if approval:
+            return approval.approved_by.username
+
+        return None
+    
+
+class ZonalSurveySerializer(serializers.ModelSerializer):
+    # Site information
+    site_name = serializers.CharField(source="station.name", read_only=True)
+
+    latitude = serializers.CharField(source="station.latitude", read_only=True)
+    longitude = serializers.CharField(source="station.longitude", read_only=True)
+
+    surveyor_name = serializers.CharField(source="surveyor.username", read_only=True)
+
+    supervisor_name = serializers.SerializerMethodField()
+    director_name = serializers.SerializerMethodField()
+
+    subsites = ZonalSubsiteSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Survey
+        fields = [
+            "id",
+            "site_name",
+            "latitude",
+            "longitude",
+            "status",
+            "surveyor_name",
+            "supervisor_name",
+            "director_name",
+            "remarks",
+            "created_at",
+            "subsites"
+        ]
+    # Supervisor name
+    def get_supervisor_name(self, obj):
+
+        approval = SurveyApproval.objects.filter(
+            survey=obj,
+            approval_level=1
+        ).select_related("approved_by").first()
+
+        if approval:
+            return approval.approved_by.username
+
+        return None
+    # Director name
+    def get_director_name(self, obj):
+
+        approval = SurveyApproval.objects.filter(
+            survey=obj,
             approval_level=2
         ).select_related("approved_by").first()
 
@@ -863,61 +1008,40 @@ class ZonalSubsiteSerializer(serializers.ModelSerializer):
     
 class GNRBSubsiteSerializer(serializers.ModelSerializer):
 
-    site_name = serializers.CharField(source="survey.station.name", read_only=True)
-    latitude=serializers.CharField(source="survey.station.latitude", read_only=True)
-    longitude=serializers.CharField(source="survey.station.longitude", read_only=True)
-    surveyor_name = serializers.CharField(source="survey.surveyor.username", read_only=True)
+    # site_name = serializers.CharField(source="survey.station.name", read_only=True)
+    # latitude = serializers.CharField(source="survey.station.latitude", read_only=True)
+    # longitude = serializers.CharField(source="survey.station.longitude", read_only=True)
 
-    supervisor_name = serializers.SerializerMethodField()
-    director_name = serializers.SerializerMethodField()
-    zonal_chief_name = serializers.SerializerMethodField()
+    # surveyor_name = serializers.CharField(source="survey.surveyor.username", read_only=True)
 
-    location_details = SurveyLocationSerializer(
-        source="surveylocation",
-        read_only=True
-    )
+    # supervisor_name = serializers.SerializerMethodField()
+    # director_name = serializers.SerializerMethodField()
+    # zonal_chief_name = serializers.SerializerMethodField()
 
-    monument_details = SurveyMonumentSerializer(
-        source="surveymonument",
-        read_only=True
-    )
+    location_details = SurveyLocationSerializer(source="surveylocation", read_only=True)
+    monument_details = SurveyMonumentSerializer(source="surveymonument", read_only=True)
+    sky_visibility = SurveySkyVisibilitySerializer(source="surveyskyvisibility", read_only=True)
+    power_details = SurveyPowerSerializer(source="surveypower", read_only=True)
+    connectivity_details = SurveyConnectivitySerializer(source="surveyconnectivity", read_only=True)
 
-    sky_visibility = SurveySkyVisibilitySerializer(
-        source="surveyskyvisibility",
-        read_only=True
-    )
-
-    power_details = SurveyPowerSerializer(
-        source="surveypower",
-        read_only=True
-    )
-
-    connectivity_details = SurveyConnectivitySerializer(
-        source="surveyconnectivity",
-        read_only=True
-    )
-
-    photo_details = SurveyPhotoSerializer(
-    source="photos",
-    read_only=True
-    )
+    photo_details = SurveyPhotoSerializer(source="photos", read_only=True)
 
     class Meta:
         model = SurveySubSite
         fields = [
             "id",
-            "site_name",
-            "latitude",
-            "longitude",
+            # "site_name",
+            # "latitude",
+            # "longitude",
             "location",
             "priority",
             "status",
             "rinex_file",
             "contact_details",
-            "surveyor_name",
-            "supervisor_name",
-            "director_name",
-            "zonal_chief_name",
+            # "surveyor_name",
+            # "supervisor_name",
+            # "director_name",
+            # "zonal_chief_name",
             "location_details",
             "monument_details",
             "sky_visibility",
@@ -927,41 +1051,193 @@ class GNRBSubsiteSerializer(serializers.ModelSerializer):
             "created_at"
         ]
 
-
     def get_supervisor_name(self, obj):
-
         approval = SurveyApproval.objects.filter(
             survey=obj.survey,
             approval_level=1
         ).select_related("approved_by").first()
 
-        if approval:
-            return approval.approved_by.username
-
-        return None
+        return approval.approved_by.username if approval else None
 
 
     def get_director_name(self, obj):
-
         approval = SurveyApproval.objects.filter(
             subsite=obj,
             approval_level=2
         ).select_related("approved_by").first()
 
-        if approval:
-            return approval.approved_by.username
-
-        return None
+        return approval.approved_by.username if approval else None
 
 
     def get_zonal_chief_name(self, obj):
-
         approval = SurveyApproval.objects.filter(
             subsite=obj,
             approval_level=3
         ).select_related("approved_by").first()
 
-        if approval:
-            return approval.approved_by.username
+        return approval.approved_by.username if approval else None
+    
+class GNRBSurveySerializer(serializers.ModelSerializer):
 
-        return None
+    site_name = serializers.CharField(source="station.name", read_only=True)
+
+    latitude = serializers.CharField(source="station.latitude", read_only=True)
+    longitude = serializers.CharField(source="station.longitude", read_only=True)
+
+    surveyor_name = serializers.CharField(source="surveyor.username", read_only=True)
+
+    supervisor_name = serializers.SerializerMethodField()
+    director_name = serializers.SerializerMethodField()
+    zonal_chief_name = serializers.SerializerMethodField()
+
+    subsites = GNRBSubsiteSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Survey
+        fields = [
+            "id",
+            "site_name",
+            "latitude",
+            "longitude",
+            "status",
+            "surveyor_name",
+            "supervisor_name",
+            "director_name",
+            "zonal_chief_name",
+            "remarks",
+            "created_at",
+            "subsites"
+        ]
+
+    def get_supervisor_name(self, obj):
+
+        approval = SurveyApproval.objects.filter(
+            survey=obj,
+            approval_level=1
+        ).select_related("approved_by").first()
+
+        return approval.approved_by.username if approval else None
+
+
+    def get_director_name(self, obj):
+
+        approval = SurveyApproval.objects.filter(
+            survey=obj,
+            approval_level=2
+        ).select_related("approved_by").first()
+
+        return approval.approved_by.username if approval else None
+
+
+    def get_zonal_chief_name(self, obj):
+
+        approval = SurveyApproval.objects.filter(
+            survey=obj,
+            approval_level=3
+        ).select_related("approved_by").first()
+
+        return approval.approved_by.username if approval else None
+# class GNRBSubsiteSerializer(serializers.ModelSerializer):
+
+#     site_name = serializers.CharField(source="survey.station.name", read_only=True)
+#     latitude=serializers.CharField(source="survey.station.latitude", read_only=True)
+#     longitude=serializers.CharField(source="survey.station.longitude", read_only=True)
+#     surveyor_name = serializers.CharField(source="survey.surveyor.username", read_only=True)
+
+#     supervisor_name = serializers.SerializerMethodField()
+#     director_name = serializers.SerializerMethodField()
+#     zonal_chief_name = serializers.SerializerMethodField()
+
+#     location_details = SurveyLocationSerializer(
+#         source="surveylocation",
+#         read_only=True
+#     )
+
+#     monument_details = SurveyMonumentSerializer(
+#         source="surveymonument",
+#         read_only=True
+#     )
+
+#     sky_visibility = SurveySkyVisibilitySerializer(
+#         source="surveyskyvisibility",
+#         read_only=True
+#     )
+
+#     power_details = SurveyPowerSerializer(
+#         source="surveypower",
+#         read_only=True
+#     )
+
+#     connectivity_details = SurveyConnectivitySerializer(
+#         source="surveyconnectivity",
+#         read_only=True
+#     )
+
+#     photo_details = SurveyPhotoSerializer(
+#     source="photos",
+#     read_only=True
+#     )
+
+#     class Meta:
+#         model = SurveySubSite
+#         fields = [
+#             "id",
+#             "site_name",
+#             "latitude",
+#             "longitude",
+#             "location",
+#             "priority",
+#             "status",
+#             "rinex_file",
+#             "contact_details",
+#             "surveyor_name",
+#             "supervisor_name",
+#             "director_name",
+#             "zonal_chief_name",
+#             "location_details",
+#             "monument_details",
+#             "sky_visibility",
+#             "power_details",
+#             "connectivity_details",
+#             "photo_details",
+#             "created_at"
+#         ]
+
+
+#     def get_supervisor_name(self, obj):
+
+#         approval = SurveyApproval.objects.filter(
+#             survey=obj.survey,
+#             approval_level=1
+#         ).select_related("approved_by").first()
+
+#         if approval:
+#             return approval.approved_by.username
+
+#         return None
+
+
+#     def get_director_name(self, obj):
+
+#         approval = SurveyApproval.objects.filter(
+#             subsite=obj,
+#             approval_level=2
+#         ).select_related("approved_by").first()
+
+#         if approval:
+#             return approval.approved_by.username
+
+#         return None
+
+
+#     def get_zonal_chief_name(self, obj):
+
+#         approval = SurveyApproval.objects.filter(
+#             subsite=obj,
+#             approval_level=3
+#         ).select_related("approved_by").first()
+
+#         if approval:
+#             return approval.approved_by.username
+
+#         return None
