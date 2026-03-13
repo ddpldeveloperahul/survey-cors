@@ -133,9 +133,13 @@ urlpatterns = [
     
     
     path("survey/<uuid:survey_id>/submitlocal/", SurveySubmitAPI_local.as_view()),
+    
     path("survey/<uuid:survey_id>/supervisor/", SupervisorApprovalAPI.as_view()),
+    path("survey/<uuid:survey_id>/supervisor/submit/", SupervisorSubmitSurveyAPI.as_view()),
+    
     path("subsite/<uuid:subsite_id>/director-decision/", DirectorSubsiteDecisionAPI.as_view()),
     path("subsite/<uuid:subsite_id>/send-to-zonal/", DirectorSendToZonalAPI.as_view()),
+    
     path("subsite/<uuid:subsite_id>/zonal-decision/", ZonalDecisionAPI.as_view()),
     path("subsite/<uuid:subsite_id>/gnrb-decision/", GNRBDecisionAPI.as_view()),
     
@@ -147,6 +151,9 @@ urlpatterns = [
     path("zonal/subsites/", ZonalSubsiteListAPI.as_view()),
 
     path("gnrb/subsites/", GNRBSubsiteListAPI.as_view()),
+    
+    
+    path("directors_by_zone/", DirectorByZoneAPI.as_view()),
     
     #
 ]

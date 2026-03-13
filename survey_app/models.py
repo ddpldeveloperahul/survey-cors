@@ -89,6 +89,15 @@ class User(AbstractUser):
 
     role = models.CharField(max_length=20, choices=ROLE_CHOICES)
     zone = models.CharField(max_length=20, choices=ZONE_CHOICES, blank=True)
+    director = models.ForeignKey(
+        "self",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        limit_choices_to={"role": "DIRECTOR"},
+        related_name="staff_members"
+    )
+
     is_approved = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -205,6 +214,9 @@ class SurveySubSite(models.Model):
         default=1,
         help_text="Priority of subsite (lower number = higher priority)"
     )
+    
+    
+
     SUBSITE_STATUS_CHOICES = [
     ("DRAFT", "Draft"),
     ("SUBMITTED", "Submitted"),
@@ -232,6 +244,8 @@ class SurveySubSite(models.Model):
     )
 
     contact_details = models.CharField(max_length=255, blank=True)
+    remarks = models.TextField(blank=True,  null=True)
+    noc  = models.FileField(upload_to="noc_documents/", null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -245,7 +259,48 @@ class SurveySubSite(models.Model):
 
 
 
+STATE_CHOICES = [
 
+    ("ANDHRA_PRADESH", "Andhra Pradesh"),
+    ("ARUNACHAL_PRADESH", "Arunachal Pradesh"),
+    ("ASSAM", "Assam"),
+    ("BIHAR", "Bihar"),
+    ("CHHATTISGARH", "Chhattisgarh"),
+    ("GOA", "Goa"),
+    ("GUJARAT", "Gujarat"),
+    ("HARYANA", "Haryana"),
+    ("HIMACHAL_PRADESH", "Himachal Pradesh"),
+    ("JHARKHAND", "Jharkhand"),
+    ("KARNATAKA", "Karnataka"),
+    ("KERALA", "Kerala"),
+    ("MADHYA_PRADESH", "Madhya Pradesh"),
+    ("MAHARASHTRA", "Maharashtra"),
+    ("MANIPUR", "Manipur"),
+    ("MEGHALAYA", "Meghalaya"),
+    ("MIZORAM", "Mizoram"),
+    ("NAGALAND", "Nagaland"),
+    ("ODISHA", "Odisha"),
+    ("PUNJAB", "Punjab"),
+    ("RAJASTHAN", "Rajasthan"),
+    ("SIKKIM", "Sikkim"),
+    ("TAMIL_NADU", "Tamil Nadu"),
+    ("TELANGANA", "Telangana"),
+    ("TRIPURA", "Tripura"),
+    ("UTTAR_PRADESH", "Uttar Pradesh"),
+    ("UTTARAKHAND", "Uttarakhand"),
+    ("WEST_BENGAL", "West Bengal"),
+
+    # Union Territories
+
+    ("ANDAMAN_NICOBAR", "Andaman and Nicobar Islands"),
+    ("CHANDIGARH", "Chandigarh"),
+    ("DADRA_NAGAR_HAVELI_DAMAN_DIU", "Dadra and Nagar Haveli and Daman and Diu"),
+    ("DELHI", "Delhi"),
+    ("JAMMU_KASHMIR", "Jammu and Kashmir"),
+    ("LADAKH", "Ladakh"),
+    ("LAKSHADWEEP", "Lakshadweep"),
+    ("PUDUCHERRY", "Puducherry"),
+]
 
 class SurveyLocation(models.Model):
     survey = models.OneToOneField(SurveySubSite, on_delete=models.CASCADE)
@@ -307,6 +362,7 @@ class SurveyMonument(models.Model):
         return f"Monument for {self.survey.location}"
 
 EMI_SOURCE_CHOICES = [
+    "None",
     "HT Powerline",
     "Distribution Powerline",
     "Transformer",
@@ -583,3 +639,12 @@ class PasswordResetOTP(models.Model):
 
     def is_expired(self):
         return self.created_at < timezone.now() - timedelta(minutes=10)
+    
+    
+# class  Noc(models.Model):
+#     survey = models.ForeignKey(Survey, on_delete=models.CASCADE)
+#     subsite = models.ForeignKey(SurveySubSite, on_delete=models.CASCADE)
+#     issued_by = models.ForeignKey(User, on_delete=models.CASCADE)
+#     issued_at = models.DateTimeField(auto_now_add=True)
+#     valid_until = models.DateTimeField()
+#     document = models.FileField(upload_to="noc_documents/")

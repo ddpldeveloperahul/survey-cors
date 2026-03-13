@@ -2,16 +2,62 @@
   "site_name": "Collector Office Jaipur"
 }
 
+
+
+TATE_CHOICES = [
+
+    ("ANDHRA_PRADESH", "Andhra Pradesh"),
+    ("ARUNACHAL_PRADESH", "Arunachal Pradesh"),
+    ("ASSAM", "Assam"),
+    ("BIHAR", "Bihar"),
+    ("CHHATTISGARH", "Chhattisgarh"),
+    ("GOA", "Goa"),
+    ("GUJARAT", "Gujarat"),
+    ("HARYANA", "Haryana"),
+    ("HIMACHAL_PRADESH", "Himachal Pradesh"),
+    ("JHARKHAND", "Jharkhand"),
+    ("KARNATAKA", "Karnataka"),
+    ("KERALA", "Kerala"),
+    ("MADHYA_PRADESH", "Madhya Pradesh"),
+    ("MAHARASHTRA", "Maharashtra"),
+    ("MANIPUR", "Manipur"),
+    ("MEGHALAYA", "Meghalaya"),
+    ("MIZORAM", "Mizoram"),
+    ("NAGALAND", "Nagaland"),
+    ("ODISHA", "Odisha"),
+    ("PUNJAB", "Punjab"),
+    ("RAJASTHAN", "Rajasthan"),
+    ("SIKKIM", "Sikkim"),
+    ("TAMIL_NADU", "Tamil Nadu"),
+    ("TELANGANA", "Telangana"),
+    ("TRIPURA", "Tripura"),
+    ("UTTAR_PRADESH", "Uttar Pradesh"),
+    ("UTTARAKHAND", "Uttarakhand"),
+    ("WEST_BENGAL", "West Bengal"),
+
+    # Union Territories
+
+    ("ANDAMAN_NICOBAR", "Andaman and Nicobar Islands"),
+    ("CHANDIGARH", "Chandigarh"),
+    ("DADRA_NAGAR_HAVELI_DAMAN_DIU", "Dadra and Nagar Haveli and Daman and Diu"),
+    ("DELHI", "Delhi"),
+    ("JAMMU_KASHMIR", "Jammu and Kashmir"),
+    ("LADAKH", "Ladakh"),
+    ("LAKSHADWEEP", "Lakshadweep"),
+    ("PUDUCHERRY", "Puducherry"),
+]
 locations
 {
-  
   "latitude": 26.9124,
   "longitude": 75.7873,
   "address": "Collectorate Campus",
   "city": "Jaipur",
   "district": "Jaipur",
-  "state": "Rajasthan"
+  "state": "UTTAR_PRADESH"
 }
+Post http://127.0.0.1:8000/api/survey/create_site/bab11d65-0444-4a17-bbbc-9db14b4a1b14/subsite/
+
+
 
 monument
 {
@@ -38,7 +84,7 @@ monument
   ]
 }
 
-sky-Visibility
+sky-visibility
 
 EMI_SOURCE_CHOICES = [
     "HT Powerline",
@@ -50,7 +96,14 @@ EMI_SOURCE_CHOICES = [
     "Water body",
     "Glazed window or Surface",
     "Others",
+    "None",
 ]
+
+[
+ {
+   "source": "None"
+ }
+],
 
 [
   {
@@ -140,7 +193,19 @@ ROLE_CHOICES = [
         ("GNRB", "GNRB Authority"),
         ("ADMIN", "Admin"),
     ]
+director mindatory Surveyor and  other optional 
 https://survey.drdesigntech.com/api/signup/
+
+{
+ "username": "rohdan2",
+ "password": "123",
+ "name": "Rohdan",
+ "email": "rohdan@test.com",
+ "mobile": "9999999999",
+ "role": "SURVEYOR",
+ "zone": "NORTH",
+ "director": "d6e72dbd-b0a3-46b2-abe6-3f6a6a6ef075"
+}
 {
     "username": "nakul",
     "password": "123",
@@ -190,9 +255,290 @@ https://survey.drdesigntech.com/api/forgot-password/
 }
 
 
+http://127.0.0.1:8000/api/survey/bab11d65-0444-4a17-bbbc-9db14b4a1b14/supervisor/
+
+{
+"subsite_id": "b02e2b1c-0535-46d2-89f9-f23c2af3f4fe",
+"decision": "APPROVE",
+"remarks": "Verified"
+}
+{
+"subsite_id": "b02e2b1c-0535-46d2-89f9-f23c2af3f4fe",
+"decision": "APPROVE",
+"remarks": "Verified"
+}
+http://127.0.0.1:8000/api/survey/bab11d65-0444-4a17-bbbc-9db14b4a1b14/supervisor/submit/
+{
+"message": "supervisor sent to Director",
+
+}
+
 https://survey.drdesigntech.com/api/subsite/c2982256-09e9-4891-8d2d-24aa82e342b8/director-decision/
 
 {
   "decision": "APPROVE",
   "remarks": "Director approved"
 }
+{
+ "decision": "REJECT",
+ "remarks": "Location not suitable"
+}
+https://survey.drdesigntech.com/api/subsite/c2982256-09e9-4891-8d2d-24aa82e342b8/send-to-zonal/
+
+http://127.0.0.1:8000/api/subsite/3a9553a3-cf4f-4d16-af8b-387ffe754807/zonal-decision/
+{
+  "decision": "APPROVE",
+  "remarks": "Zonal approved"
+}
+{
+  "decision": "REJECT",
+  "remarks": "Zonal approved"
+}
+
+http://127.0.0.1:8000/api/subsite/3a9553a3-cf4f-4d16-af8b-387ffe754807/send-to-zonal/
+
+
+http://127.0.0.1:8000/api/subsite/3a9553a3-cf4f-4d16-af8b-387ffe754807/gnrb-decision/
+{
+  "decision": "APPROVE",
+  "remarks": "Final approved"
+}
+
+{
+  "decision": "REJECT",
+  "remarks": "Final approved"
+}
+
+
+
+
+list of the director  with zone
+
+NORTH
+{
+    "username": "J&K ",
+    "password": "123",
+    "name": "J&K and Ladakh Geospatial Directorate (GD)",
+    "email": "J&K@gmail.com",
+    "mobile": "9876543201",
+    "role": "DIRECTOR",
+    "zone": "NORTH"
+}
+{
+    "username": "Punjab",
+    "password": "123",
+    "name": "Punjab, Haryana, Himachal Pradesh & Chandigarh GD",
+    "email": "Punjab@gmail.com",
+    "mobile": "9876543202",
+    "role": "DIRECTOR",
+    "zone": "NORTH"
+}
+
+{
+    "username": "Uttarakhand",
+    "password": "123",
+    "name": "Uttarakhand GD",
+    "email": "Uttarakhand@gmail.com",
+    "mobile": "9876543203",
+    "role": "DIRECTOR",
+    "zone": "NORTH"
+}
+
+{
+    "username": "Uttar Pradesh",
+    "password": "123",
+    "name": "Uttar Pradesh GD",
+    "email": "UttarPradesh@gmail.com",
+    "mobile": "9876543204",
+    "role": "DIRECTOR",
+    "zone": "NORTH"
+}
+
+{
+    "username": "Delhi",
+    "password": "123",
+    "name": "International Boundary Directorate and Delhi GD",
+    "email": "Delhi@gmail.com",
+    "mobile": "9876543205",
+    "role": "DIRECTOR",
+    "zone": "NORTH"
+}
+
+
+SOUTH ZONE
+{
+    "username": "Telangana",
+    "password": "123",
+    "name": "Andhra Pradesh & Telangana GD",
+    "email": "Telangana@gmail.com",
+    "mobile": "9876543201",
+    "role": "DIRECTOR",
+    "zone": "SOUTH"
+}
+
+{
+    "username": "Karnataka",
+    "password": "123",
+    "name": "Karnataka GD",
+    "email": "Karnataka@gmail.com",
+    "mobile": "9876543202",
+    "role": "DIRECTOR",
+    "zone": "SOUTH"
+}
+
+{
+    "username": "Tamil",
+    "password": "123",
+    "name": "Tamil Nadu, Puducherry and Andaman & Nicobar Islands GD",
+    "email": "Tamil@gmail.com",
+    "mobile": "9876543203",
+    "role": "DIRECTOR",
+    "zone": "SOUTH"
+}
+
+{
+    "username": "Kerala",
+    "password": "123",
+    "name": "Kerala & Lakshadweep Wing",
+    "email": "Kerala@gmail.com",
+    "mobile": "9876543204",
+    "role": "DIRECTOR",
+    "zone": "SOUTH"
+}
+WEST ZONE
+{
+    "username": "Rajasthan",
+    "password": "123",
+    "name": "Rajasthan GD",
+    "email": "Rajasthan@gmail.com",
+    "mobile": "9876543301",
+    "role": "DIRECTOR",
+    "zone": "WEST"
+}
+{
+    "username": "Gujarat",
+    "password": "123",
+    "name": "Gujarat, Daman & Diu & Dadra & Nagar Haveli GD",
+    "email": "Gujarat@gmail.com",
+    "mobile": "9876543301",
+    "role": "DIRECTOR",
+    "zone": "WEST"
+}
+
+{
+    "username": "Madhya",
+    "password": "123",
+    "name": "Madhya Pradesh GD",
+    "email": "Madhya@gmail.com",
+    "mobile": "9876543302",
+    "role": "DIRECTOR",
+    "zone": "WEST"
+}
+
+{
+    "username": "Goa",
+    "password": "123",
+    "name": "Maharashtra & Goa GD",
+    "email": "Goa@gmail.com",
+    "mobile": "9876543304",
+    "role": "DIRECTOR",
+    "zone": "WEST"
+}
+
+EAST ZONE
+{
+    "username": "Jharkhand",
+    "password": "123",
+    "name": "Jharkhand & Bihar GD",
+    "email": "Bihar@gmail.com",
+    "mobile": "9876543401",
+    "role": "DIRECTOR",
+    "zone": "EAST"
+}
+
+
+{
+    "username": "Bihar",
+    "password": "123",
+    "name": "Bihar Wing",
+    "email": "Bihar1@gmail.com",
+    "mobile": "9876543401",
+    "role": "DIRECTOR",
+    "zone": "EAST"
+}
+
+{
+    "username": "West",
+    "password": "123",
+    "name": "West Bengal & Sikkim GD",
+    "email": "West@gmail.com",
+    "mobile": "9876543405",
+    "role": "DIRECTOR",
+    "zone": "EAST"
+}
+
+{
+    "username": "Odisha",
+    "password": "123",
+    "name": "Odisha & Chhattisgarh GD",
+    "email": "Odisha@gmail.com",
+    "mobile": "9876543406",
+    "role": "DIRECTOR",
+    "zone": "EAST"
+}
+
+{
+    "username": "Chhattisgarh",
+    "password": "123",
+    "name": "Chhattisgarh Wing",
+    "email": "Chhattisgarh@gmail.com",
+    "mobile": "9876543407",
+    "role": "DIRECTOR",
+    "zone": "EAST"
+}
+
+{
+    "username": "Meghalaya",
+    "password": "123",
+    "name": "Meghalaya & Arunachal Pradesh GD",
+    "email": "Meghalaya@gmail.com",
+    "mobile": "9876543408",
+    "role": "DIRECTOR",
+    "zone": "EAST"
+}
+{
+    "username": "Assam",
+    "password": "123",
+    "name": "Assam, Nagaland & Tripura, Manipur & Mizoram GD",
+    "email": "Assam@gmail.com",
+    "mobile": "9876543409",
+    "role": "DIRECTOR",
+    "zone": "EAST"
+}
+
+{
+    "username": "Tripura",
+    "password": "123",
+    "name": "Tripura, Manipur & Mizoram Wing",
+    "email": "Tripura@gmail.com",
+    "mobile": "9876543410",
+    "role": "DIRECTOR",
+    "zone": "EAST"
+}
+
+
+http://127.0.0.1:8000/api/survey/f505cf79-5f8b-46f2-8b91-77316002b264/supervisor/
+{
+"subsite_id": "b02e2b1c-0535-46d2-89f9-f23c2af3f4fe",
+"decision": "APPROVE",
+"remarks": "Verified"
+}
+
+{
+"subsite_id": "23ea0662-f964-4d7e-afea-ee060bc5e82c",
+"decision": "REJECT",
+"remarks": "Bad location"
+}
+
+
+http://127.0.0.1:8000/api/directors_by_zone/?zone=NORTH

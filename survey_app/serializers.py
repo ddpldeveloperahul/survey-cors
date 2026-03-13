@@ -54,9 +54,42 @@ from rest_framework.authtoken.models import Token
 from .models import User
 
 
-from rest_framework import serializers
-from rest_framework.authtoken.models import Token
-from .models import User
+# class SignupSerializer(serializers.ModelSerializer):
+
+#     password = serializers.CharField(write_only=True)
+
+#     class Meta:
+#         model = User
+#         fields = [
+#             "username",
+#             "password",
+#             "name",
+#             "email",
+#             "mobile",
+#             "role",
+#             "zone",
+#         ]
+
+#     def create(self, validated_data):
+
+#         password = validated_data.pop("password")
+
+#         role = validated_data.get("role")
+
+#         user = User(**validated_data)
+#         user.set_password(password)
+
+#         # 🔑 Director, GNRB, and Zonal Chief automatically approved
+#         if role == "DIRECTOR" or role == "GNRB" or role == "ZONAL_CHIEF":
+#             user.is_approved = True
+#         else:
+#             user.is_approved = False
+
+#         user.save()
+
+#         Token.objects.create(user=user)
+
+#         return user
 
 class SignupSerializer(serializers.ModelSerializer):
 
@@ -72,30 +105,46 @@ class SignupSerializer(serializers.ModelSerializer):
             "mobile",
             "role",
             "zone",
+            "director"
         ]
+
+    def validate(self, data):
+
+        role = data.get("role")
+        director = data.get("director")
+        zone = data.get("zone")
+
+        # Only SURVEYOR needs director
+        if role == "SURVEYOR":
+
+            if not director:
+                raise serializers.ValidationError({
+                    "director": "Director is required for Surveyor."
+                })
+
+            if director.zone != zone:
+                raise serializers.ValidationError({
+                    "director": "Director must belong to the same zone."
+                })
+
+        return data
+
 
     def create(self, validated_data):
 
         password = validated_data.pop("password")
 
-        role = validated_data.get("role")
-
         user = User(**validated_data)
         user.set_password(password)
 
-        # 🔑 Director, GNRB, and Zonal Chief automatically approved
-        if role == "DIRECTOR" or role == "GNRB" or role == "ZONAL_CHIEF":
-            user.is_approved = True
-        else:
-            user.is_approved = False
+        approved_roles = ["DIRECTOR", "GNRB", "ZONAL_CHIEF"]
+        user.is_approved = user.role in approved_roles
 
         user.save()
 
-        Token.objects.create(user=user)
-
         return user
-
-
+    
+    
 class LoginSerializer(serializers.Serializer):
 
     username = serializers.CharField()
@@ -198,11 +247,16 @@ class SurveySubSiteSerializer(serializers.ModelSerializer):
             "survey",
             "location",
             "priority",
+            "status",
             "rinex_file",
             "contact_details",
+            "remarks",
+            "noc",
             "created_at",
         ]
+
         read_only_fields = ["id", "survey", "created_at"]
+
         extra_kwargs = {
             "location": {"required": True},
             "priority": {"required": True},
@@ -299,6 +353,69 @@ class SurveyMonumentSerializer(serializers.ModelSerializer):
 
         return data
 
+# class SurveySkyVisibilitySerializer(serializers.ModelSerializer):
+
+#     class Meta:
+#         model = SurveySkyVisibility
+#         fields = [
+#             "id",
+#             "polar_chart_image",
+#             "multipath_emi_source",
+#             "remarks",
+#         ]
+#         read_only_fields = ["id"]
+
+#     def validate(self, data):
+
+#         emi_list = data.get("multipath_emi_source", [])
+
+#         if not emi_list:
+#             raise serializers.ValidationError({
+#                 "multipath_emi_source": "At least one EMI source required"
+#             })
+
+#         for item in emi_list:
+
+#             if not isinstance(item, dict):
+#                 raise serializers.ValidationError(
+#                     "Each EMI entry must be an object"
+#                 )
+
+#             source = item.get("source")
+#             direction = item.get("direction")
+#             distance = item.get("approx_distance_meter")
+
+#             # ✅ Validate Source
+#             if source not in EMI_SOURCE_CHOICES:
+#                 raise serializers.ValidationError(
+#                     f"Invalid EMI source: {source}"
+#                 )
+
+#             # ✅ Validate Direction (Dropdown)
+#             if direction not in DIRECTION_CHOICES:
+#                 raise serializers.ValidationError(
+#                     f"Direction must be one of {DIRECTION_CHOICES}"
+#                 )
+
+#             # ✅ Validate Distance
+#             if distance is None:
+#                 raise serializers.ValidationError(
+#                     f"Approx. Distance required for {source}"
+#                 )
+
+#             if not isinstance(distance, int) or distance <= 0:
+#                 raise serializers.ValidationError(
+#                     f"Approx. Distance must be positive integer for {source}"
+#                 )
+
+#             # ✅ If Others → require other_text
+#             if source == "Others":
+#                 if not item.get("other_text"):
+#                     raise serializers.ValidationError(
+#                         "Provide other_text when source is Others"
+#                     )
+
+#         return data
 class SurveySkyVisibilitySerializer(serializers.ModelSerializer):
 
     class Meta:
@@ -324,37 +441,41 @@ class SurveySkyVisibilitySerializer(serializers.ModelSerializer):
 
             if not isinstance(item, dict):
                 raise serializers.ValidationError(
-                    "Each EMI entry must be an object"
+                    "Each EMI entry must be object"
                 )
 
             source = item.get("source")
             direction = item.get("direction")
             distance = item.get("approx_distance_meter")
 
-            # ✅ Validate Source
+            # Validate source
             if source not in EMI_SOURCE_CHOICES:
                 raise serializers.ValidationError(
                     f"Invalid EMI source: {source}"
                 )
 
-            # ✅ Validate Direction (Dropdown)
+            # If None selected skip validation
+            if source == "None":
+                continue
+
+            # Direction validation
             if direction not in DIRECTION_CHOICES:
                 raise serializers.ValidationError(
                     f"Direction must be one of {DIRECTION_CHOICES}"
                 )
 
-            # ✅ Validate Distance
+            # Distance validation
             if distance is None:
                 raise serializers.ValidationError(
-                    f"Approx. Distance required for {source}"
+                    f"Approx distance required for {source}"
                 )
 
             if not isinstance(distance, int) or distance <= 0:
                 raise serializers.ValidationError(
-                    f"Approx. Distance must be positive integer for {source}"
+                    "Distance must be positive integer"
                 )
 
-            # ✅ If Others → require other_text
+            # If Others selected
             if source == "Others":
                 if not item.get("other_text"):
                     raise serializers.ValidationError(
@@ -663,6 +784,8 @@ class SupervisorSubsiteSerializer(serializers.ModelSerializer):
             "priority",
             "status",
             "rinex_file",
+            'remarks',
+            "noc",
             "contact_details",
             "location_details",
             "monument_details",
@@ -737,6 +860,8 @@ class DirectorSubsiteSerializer(serializers.ModelSerializer):
             "priority",
             "status",
             "rinex_file",
+            "remarks",
+            "noc",
             "contact_details",
             "location_details",
             "monument_details",
@@ -910,6 +1035,8 @@ class ZonalSubsiteSerializer(serializers.ModelSerializer):
             "priority",
             "status",
             "rinex_file",
+            'remarks',
+            "noc",
             "contact_details",
             # "surveyor_name",
             # "supervisor_name",
@@ -1037,6 +1164,8 @@ class GNRBSubsiteSerializer(serializers.ModelSerializer):
             "priority",
             "status",
             "rinex_file",
+            'remarks',
+            "noc",
             "contact_details",
             # "surveyor_name",
             # "supervisor_name",

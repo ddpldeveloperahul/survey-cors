@@ -1,15 +1,95 @@
 from django.contrib import admin
+from .models import *
+from .models import User
+
+
+# class UserAdminForm(forms.ModelForm):
+
+#     class Meta:
+#         model = User
+#         fields = "__all__"
+
+#     def __init__(self, *args, **kwargs):
+#         super().__init__(*args, **kwargs)
+
+#         # agar zone selected hai to us zone ke directors dikhaye
+#         if "zone" in self.data:
+#             zone = self.data.get("zone")
+
+#             self.fields["director"].queryset = User.objects.filter(
+#                 role="DIRECTOR",
+#                 zone=zone
+#             )
+
+#         # edit mode me
+#         elif self.instance.pk and self.instance.zone:
+#             self.fields["director"].queryset = User.objects.filter(
+#                 role="DIRECTOR",
+#                 zone=self.instance.zone
+#             )
+
+#         else:
+#             self.fields["director"].queryset = User.objects.filter(
+#                 role="DIRECTOR"
+#             )
+
+
+# class UserAdmin(admin.ModelAdmin):
+
+#     form = UserAdminForm
+
+#     list_display = [
+#         "username",
+#         "name",
+#         "email",
+#         "role",
+#         "zone",
+#         "director",
+#         "is_approved"
+#     ]
+
+#     list_filter = ["role", "zone", "is_approved"]
+
+
+# admin.site.register(User, UserAdmin)
+
+# @admin.register(User)
+# class UserAdmin(admin.ModelAdmin):
+#     list_display = ("id", "email", "name", "role", "zone", "is_staff", "is_active","is_approved", "created_at")
+#     search_fields = ("email", "name", "role", "zone")
+#     list_filter = ("role", "zone", "is_staff", "is_active")
 
 from django.contrib import admin
-from .models import *
+from .models import User
 
-@admin.register(User)
+
 class UserAdmin(admin.ModelAdmin):
-    list_display = ("id", "email", "name", "role", "zone", "is_staff", "is_active","is_approved", "created_at")
+
+    list_display = [
+        "id",
+        "username",
+        "name",
+        "email",
+        "role",
+        "zone",
+        "director",
+        "is_approved",
+        "is_staff",
+        "is_active",
+        "created_at"
+    ]
+
+    list_filter = ["role", "zone", "is_approved"]
     search_fields = ("email", "name", "role", "zone")
-    list_filter = ("role", "zone", "is_staff", "is_active")
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+
+        if db_field.name == "director":
+            kwargs["queryset"] = User.objects.filter(role="DIRECTOR")
+
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 
+admin.site.register(User, UserAdmin)
 # class SurveyPhotoInline(admin.TabularInline):
 #     model = SurveyPhoto
 #     extra = 4

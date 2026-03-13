@@ -17,79 +17,39 @@ from django.conf import settings
 from .models import PasswordResetOTP
 from rest_framework.authentication import TokenAuthentication
 from django.contrib.auth import authenticate, login, logout    
-
-
-
-# class SignupAPI(APIView):
-#     permission_classes = [AllowAny]
-#     def post(self, request):
-#         serializer = SignupSerializer(data=request.data)
-#         serializer.is_valid(raise_exception=True)
-#         user = serializer.save()
-#         token = Token.objects.get(user=user)
-
-#         return Response({
-#             "message": "User registered successfully",
-#             "user_id": user.id,
-#             "username": user.username,
-#             "role": user.role,
-#             "token": token.key
-#         })
-
-# class LoginAPI(APIView):
-#     permission_classes = [AllowAny]
-#     def post(self, request):
-#         serializer = LoginSerializer(data=request.data)
-#         serializer.is_valid(raise_exception=True)
-
-#         user = serializer.validated_data["user"]
-#         token, _ = Token.objects.get_or_create(user=user)
-
-#         return Response({
-#             "message": "Login successful",
-#             "user_id": user.id,
-#             "username": user.username,
-#             "role": user.role,
-#             "token": token.key
-#         })
-
 from django.http import JsonResponse
 from .models import User
 import json
 from django.views.decorators.csrf import csrf_exempt
-from django.contrib.auth import authenticate, login
-from django.shortcuts import get_object_or_404
+from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 
 
-# ------------------ SIGNUP ------------------
 
-# @csrf_exempt
-# def signup_view(request):
 
-#     if request.method != "POST":
-#         return JsonResponse({"error": "POST method required"}, status=405)
 
-#     try:
-#         data = json.loads(request.body)
 
-#         user = User.objects.create_user(
-#             username=data["username"],
-#             password=data["password"],
-#             email=data["email"],
-#             name=data["name"],
-#             mobile=data["mobile"],
-#             role=data["role"],
-#             zone=data.get("zone", ""),
-#             is_approved=False
-#         )
+# class SignupAPI(APIView):
 
-#         return JsonResponse({
-#             "message": "User registered successfully. Waiting for approval."
+#     permission_classes = [AllowAny]
+
+#     def post(self, request):
+
+#         serializer = SignupSerializer(data=request.data)
+#         serializer.is_valid(raise_exception=True)
+
+#         user = serializer.save()
+
+#         token = Token.objects.get(user=user)
+
+#         return Response({
+#             "message": "User registered successfully. Waiting for approval.",
+#             "user_id": user.id,
+#             "username": user.username,
+#             "role": user.role,
+#             "token": token.key
 #         })
 
-#     except Exception as e:
-#         return JsonResponse({"error": str(e)}, status=400)
 
 class SignupAPI(APIView):
 
@@ -101,47 +61,15 @@ class SignupAPI(APIView):
         serializer.is_valid(raise_exception=True)
 
         user = serializer.save()
-
-        token = Token.objects.get(user=user)
-
+        token = Token.objects.filter(user=user).first()
         return Response({
             "message": "User registered successfully. Waiting for approval.",
             "user_id": user.id,
             "username": user.username,
             "role": user.role,
-            "token": token.key
+            "zone": user.zone,
+            "director": user.director.name if user.director else None,
         })
-# ------------------ LOGIN ------------------
-
-# @csrf_exempt
-# def login_view(request):
-
-#     if request.method != "POST":
-#         return JsonResponse({"error": "POST method required"}, status=405)
-
-#     try:
-#         data = json.loads(request.body)
-
-#         user = authenticate(
-#             username=data["username"],
-#             password=data["password"]
-#         )
-
-#         if user is None:
-#             return JsonResponse({"error": "Invalid credentials"}, status=400)
-
-#         if not user.is_approved:
-#             return JsonResponse({"error": "Account not approved yet"}, status=403)
-
-#         login(request, user)
-
-#         return JsonResponse({
-#             "message": "Login successful",
-#             "role": user.role
-#         })
-
-#     except Exception as e:
-#         return JsonResponse({"error": str(e)}, status=400)
 class LoginAPI(APIView):
 
     permission_classes = [AllowAny]
@@ -162,8 +90,32 @@ class LoginAPI(APIView):
             "role": user.role,
             "token": token.key
         })
+        
+        
+class DirectorByZoneAPI(APIView):
 
-# ------------------ PendingSurveyorsAPI SURVEYOR ------------------
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+
+        zone = request.query_params.get("zone")
+
+        directors = User.objects.filter(
+            role="DIRECTOR",
+            zone=zone
+        )
+
+        data = [
+            {
+                "id": d.id,
+                "name": d.name,
+                "username": d.username
+            }
+            for d in directors
+        ]
+
+        return Response(data)
+# ---------------------PendingSurveyorsAPI SURVEYOR------------------------
 
 
 class PendingSurveyorsAPI(APIView):
@@ -1473,47 +1425,234 @@ class SurveySubmitAPI_local(APIView):
 #         )
 
 #         return Response({"message": "Supervisor decision saved"})
+# class SupervisorApprovalAPI(APIView):
+#     permission_classes = [IsAuthenticated]
+
+#     @transaction.atomic
+#     def post(self, request, survey_id):
+
+#         survey = get_object_or_404(Survey, id=survey_id)
+
+#         decision = request.data.get("decision")
+#         remarks = request.data.get("remarks", "")
+
+#         if survey.status != "SUBMITTED":
+#             return Response({"error": "Invalid state"}, status=400)
+
+#         if decision == "APPROVE":
+#             survey.status = "SUPERVISOR_APPROVED"
+#             survey.subsites.update(status="SUPERVISOR_APPROVED")
+#             db_decision = "APPROVED"
+
+#         elif decision == "REJECT":
+#             survey.status = "REJECTED"
+#             survey.subsites.update(status="REJECTED")
+#             db_decision = "REJECTED"
+
+#         else:
+#             return Response({"error": "Invalid decision"}, status=400)
+
+#         survey.save()
+
+#         SurveyApproval.objects.create(
+#             survey=survey,
+#             approval_level=1,
+#             approved_by=request.user,
+#             decision=db_decision,
+#             remarks=remarks
+#         )
+
+#         return Response({"message": "Supervisor decision saved"})
+
+
+#     # 🔵 UPDATE PRIORITY
+#     @transaction.atomic
+#     def put(self, request, survey_id):
+
+#         if request.user.role != "SUPERVISOR":
+#             return Response({"error": "Unauthorized"}, status=403)
+
+#         subsite_id = request.data.get("subsite_id")
+#         new_priority = request.data.get("priority")
+
+#         subsite = get_object_or_404(SurveySubSite, id=subsite_id)
+
+#         # duplicate check
+#         if SurveySubSite.objects.filter(
+#             survey=subsite.survey,
+#             priority=new_priority
+#         ).exclude(id=subsite.id).exists():
+
+#             return Response(
+#                 {"error": "Priority already exists in this survey"},
+#                 status=400
+#             )
+
+#         subsite.priority = new_priority
+#         subsite.save(update_fields=["priority"])
+
+#         return Response({
+#             "message": "Priority updated successfully",
+#             "subsite_id": str(subsite.id),
+#             "priority": new_priority
+#         })
+
+# class SupervisorApprovalAPI(APIView):
+
+#     permission_classes = [IsAuthenticated]
+
+#     # -------------------------
+#     # APPROVE / REJECT SUBSITE
+#     # -------------------------
+#     @transaction.atomic
+#     def post(self, request, survey_id):
+
+#         if request.user.role != "SUPERVISOR":
+#             return Response({"error": "Only supervisor allowed"}, status=403)
+
+#         survey = get_object_or_404(Survey, id=survey_id)
+
+#         subsite_id = request.data.get("subsite_id")
+#         decision = request.data.get("decision")
+#         remarks = request.data.get("remarks", "")
+
+#         subsite = get_object_or_404(SurveySubSite, id=subsite_id, survey=survey)
+
+#         if decision == "APPROVE":
+
+#             subsite.status = "SUPERVISOR_APPROVED"
+#             db_decision = "APPROVED"
+
+#         elif decision == "REJECT":
+
+#             subsite.status = "REJECTED_BY_SUPERVISOR"
+#             db_decision = "REJECTED"
+
+#         else:
+#             return Response({"error": "Invalid decision"}, status=400)
+
+#         subsite.save()
+
+#         SurveyApproval.objects.create(
+#             survey=survey,
+#             subsite=subsite,
+#             approval_level=1,
+#             approved_by=request.user,
+#             decision=db_decision,
+#             remarks=remarks
+#         )
+
+#         return Response({
+#             "message": "Subsite decision saved",
+#             "subsite_id": str(subsite.id),
+#             "status": subsite.status
+#         })
+
+
+#     # -------------------------
+#     # UPDATE PRIORITY + REMARKS
+#     # -------------------------
+#     @transaction.atomic
+#     def put(self, request, survey_id):
+
+#         if request.user.role != "SUPERVISOR":
+#             return Response({"error": "Unauthorized"}, status=403)
+
+#         subsite_id = request.data.get("subsite_id")
+#         new_priority = request.data.get("priority")
+#         remarks = request.data.get("remarks")
+
+#         subsite = get_object_or_404(SurveySubSite, id=subsite_id, survey_id=survey_id)
+
+#         if new_priority is not None:
+#             subsite.priority = new_priority
+
+#         if remarks is not None:
+#             subsite.remarks = remarks
+
+#         subsite.save()
+
+#         return Response({
+#             "message": "Subsite updated successfully",
+#             "subsite_id": str(subsite.id),
+#             "priority": subsite.priority,
+#             "remarks": subsite.remarks
+#         })
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from django.shortcuts import get_object_or_404
+from django.db import transaction
+
+from .models import Survey, SurveySubSite, SurveyApproval
+
+
 class SupervisorApprovalAPI(APIView):
+
     permission_classes = [IsAuthenticated]
 
+    # -------------------------
+    # APPROVE / REJECT SUBSITE
+    # -------------------------
     @transaction.atomic
     def post(self, request, survey_id):
 
+        if request.user.role != "SUPERVISOR":
+            return Response({"error": "Only supervisor allowed"}, status=403)
+
         survey = get_object_or_404(Survey, id=survey_id)
 
+        # freeze after submission to director
+        if survey.status == "SUPERVISOR_APPROVED":
+            return Response({
+                "error": "Survey already submitted to Director. Decision cannot be changed."
+            }, status=400)
+
+        subsite_id = request.data.get("subsite_id")
         decision = request.data.get("decision")
         remarks = request.data.get("remarks", "")
 
-        if survey.status != "SUBMITTED":
-            return Response({"error": "Invalid state"}, status=400)
+        if not subsite_id:
+            return Response({"error": "subsite_id required"}, status=400)
 
+        subsite = get_object_or_404(SurveySubSite, id=subsite_id, survey=survey)
+
+        # -------- CHANGE DECISION --------
         if decision == "APPROVE":
-            survey.status = "SUPERVISOR_APPROVED"
-            survey.subsites.update(status="SUPERVISOR_APPROVED")
+
+            subsite.status = "SUPERVISOR_APPROVED"
             db_decision = "APPROVED"
 
         elif decision == "REJECT":
-            survey.status = "REJECTED"
-            survey.subsites.update(status="REJECTED")
+
+            subsite.status = "REJECTED_BY_SUPERVISOR"
             db_decision = "REJECTED"
 
         else:
             return Response({"error": "Invalid decision"}, status=400)
 
-        survey.save()
+        subsite.save()
 
+        # save decision history
         SurveyApproval.objects.create(
             survey=survey,
+            subsite=subsite,
             approval_level=1,
             approved_by=request.user,
             decision=db_decision,
             remarks=remarks
         )
 
-        return Response({"message": "Supervisor decision saved"})
+        return Response({
+            "message": "Decision updated successfully",
+            "subsite_id": str(subsite.id),
+            "status": subsite.status
+        })
 
 
-    # 🔵 UPDATE PRIORITY
+    # -------------------------
+    # UPDATE PRIORITY + REMARKS + NOC
+    # -------------------------
     @transaction.atomic
     def put(self, request, survey_id):
 
@@ -1522,33 +1661,110 @@ class SupervisorApprovalAPI(APIView):
 
         subsite_id = request.data.get("subsite_id")
         new_priority = request.data.get("priority")
+        remarks = request.data.get("remarks")
+        noc_file = request.FILES.get("noc")
 
-        subsite = get_object_or_404(SurveySubSite, id=subsite_id)
+        if not subsite_id:
+            return Response({"error": "subsite_id required"}, status=400)
 
-        # duplicate check
-        if SurveySubSite.objects.filter(
-            survey=subsite.survey,
-            priority=new_priority
-        ).exclude(id=subsite.id).exists():
+        subsite = get_object_or_404(
+            SurveySubSite,
+            id=subsite_id,
+            survey_id=survey_id
+        )
 
-            return Response(
-                {"error": "Priority already exists in this survey"},
-                status=400
-            )
+        # -------- PRIORITY UPDATE --------
+        if new_priority is not None:
+            try:
+                subsite.priority = int(new_priority)
+            except ValueError:
+                return Response(
+                    {"error": "Priority must be integer"},
+                    status=400
+                )
 
-        subsite.priority = new_priority
-        subsite.save(update_fields=["priority"])
+        # -------- REMARKS UPDATE --------
+        if remarks is not None:
+            subsite.remarks = remarks
+
+        # -------- NOC UPLOAD --------
+        if noc_file:
+
+            # freeze NOC once uploaded
+            if subsite.noc:
+                return Response({
+                    "error": "NOC already uploaded. It cannot be modified."
+                }, status=400)
+
+            subsite.noc = noc_file
+
+        subsite.save()
 
         return Response({
-            "message": "Priority updated successfully",
+            "message": "Subsite updated successfully",
             "subsite_id": str(subsite.id),
-            "priority": new_priority
+            "priority": subsite.priority,
+            "remarks": subsite.remarks,
+            "noc_uploaded": bool(subsite.noc)
         })
-class DirectorSubsiteDecisionAPI(APIView):
+        
+class SupervisorSubmitSurveyAPI(APIView):
+
     permission_classes = [IsAuthenticated]
 
     @transaction.atomic
+    def post(self, request, survey_id):
+
+        if request.user.role != "SUPERVISOR":
+            return Response({"error": "Unauthorized"}, status=403)
+
+        survey = get_object_or_404(Survey, id=survey_id)
+
+        # -------- ALREADY SUBMITTED CHECK --------
+        if survey.status == "SUPERVISOR_APPROVED":
+            return Response({
+                "message": "Survey already submitted to Director"
+            }, status=400)
+
+        approved_subsites = survey.subsites.filter(
+            status="SUPERVISOR_APPROVED"
+        )
+
+        if not approved_subsites.exists():
+            return Response({
+                "error": "No approved subsites to send to Director"
+            }, status=400)
+
+        # -------- PRIORITY VALIDATION --------
+        priorities = list(
+            approved_subsites.values_list("priority", flat=True)
+        )
+
+        if len(priorities) != len(set(priorities)):
+            return Response({
+                "error": "Approved subsites must have unique priority before submitting"
+            }, status=400)
+
+        # -------- SUBMIT SURVEY --------
+        survey.status = "SUPERVISOR_APPROVED"
+        survey.save()
+
+        return Response({
+            "message": "Survey successfully submitted to Director",
+            "approved_subsites": approved_subsites.count()
+        })
+class DirectorSubsiteDecisionAPI(APIView):
+
+    permission_classes = [IsAuthenticated]
+
+    # -------------------------
+    # APPROVE / REJECT SUBSITE
+    # -------------------------
+    @transaction.atomic
     def post(self, request, subsite_id):
+
+        if request.user.role != "DIRECTOR":
+            return Response({"error": "Unauthorized"}, status=403)
 
         subsite = get_object_or_404(SurveySubSite, id=subsite_id)
         survey = subsite.survey
@@ -1560,10 +1776,13 @@ class DirectorSubsiteDecisionAPI(APIView):
             return Response({"error": "Invalid state"}, status=400)
 
         if decision == "APPROVE":
-            subsite.status = "DIRECTOR_APPROVED"
+
+            # Send directly to Zonal
+            subsite.status = "SENT_TO_ZONAL"
             db_decision = "APPROVED"
 
         elif decision == "REJECT":
+
             subsite.status = "REJECTED_BY_DIRECTOR"
             db_decision = "REJECTED"
 
@@ -1581,10 +1800,14 @@ class DirectorSubsiteDecisionAPI(APIView):
             remarks=remarks
         )
 
-        return Response({"message": "Director decision saved"})
+        return Response({
+            "message": "Director decision saved"
+        })
 
 
-    # 🔵 UPDATE PRIORITY
+    # -------------------------
+    # UPDATE PRIORITY + REMARKS + NOC
+    # -------------------------
     @transaction.atomic
     def put(self, request, subsite_id):
 
@@ -1594,29 +1817,301 @@ class DirectorSubsiteDecisionAPI(APIView):
         subsite = get_object_or_404(SurveySubSite, id=subsite_id)
 
         new_priority = request.data.get("priority")
+        remarks = request.data.get("remarks")
+        noc_file = request.FILES.get("noc")
 
-        if not new_priority:
-            return Response({"error": "Priority required"}, status=400)
+        # -------------------------
+        # PRIORITY UPDATE
+        # -------------------------
+        if new_priority is not None:
 
-        # duplicate priority check
-        if SurveySubSite.objects.filter(
-            survey=subsite.survey,
-            priority=new_priority
-        ).exclude(id=subsite.id).exists():
+            try:
+                new_priority = int(new_priority)
+            except ValueError:
+                return Response(
+                    {"error": "Priority must be integer"},
+                    status=400
+                )
 
-            return Response(
-                {"error": "Priority already exists in this survey"},
-                status=400
-            )
+            # check duplicate priority ignoring rejected subsites
+            duplicate = SurveySubSite.objects.filter(
+                survey=subsite.survey,
+                priority=new_priority
+            ).exclude(
+                id=subsite.id
+            ).exclude(
+                status__in=[
+                    "REJECTED_BY_DIRECTOR",
+                    "REJECTED_BY_ZONAL",
+                    "REJECTED_BY_GNRB"
+                ]
+            ).exists()
 
-        subsite.priority = new_priority
-        subsite.save(update_fields=["priority"])
+            if duplicate:
+                return Response({
+                    "error": "Priority already exists in active subsites"
+                }, status=400)
+
+            subsite.priority = new_priority
+
+
+        # -------------------------
+        # REMARKS UPDATE
+        # -------------------------
+        if remarks is not None:
+            subsite.remarks = remarks
+
+
+        # -------------------------
+        # NOC UPLOAD
+        # -------------------------
+        if noc_file:
+
+            if subsite.noc:
+                return Response({
+                    "error": "NOC already uploaded and cannot be modified"
+                }, status=400)
+
+            subsite.noc = noc_file
+
+
+        subsite.save()
 
         return Response({
-            "message": "Priority updated by Director",
+            "message": "Subsite updated by Director",
             "subsite_id": str(subsite.id),
-            "priority": new_priority
+            "priority": subsite.priority,
+            "remarks": subsite.remarks,
+            "noc_uploaded": bool(subsite.noc)
         })
+# class DirectorSubsiteDecisionAPI(APIView):
+
+#     permission_classes = [IsAuthenticated]
+
+#     # -------------------------
+#     # APPROVE / REJECT
+#     # -------------------------
+#     @transaction.atomic
+#     def post(self, request, subsite_id):
+
+#         if request.user.role != "DIRECTOR":
+#             return Response({"error": "Unauthorized"}, status=403)
+#         subsite = get_object_or_404(SurveySubSite, id=subsite_id)
+#         survey = subsite.survey
+
+#         decision = request.data.get("decision")
+#         remarks = request.data.get("remarks", "")
+
+#         if subsite.status != "SUPERVISOR_APPROVED":
+#             return Response({"error": "Invalid state"}, status=400)
+
+#         if decision == "APPROVE":
+#             subsite.status = "SENT_TO_ZONAL"
+#             db_decision = "APPROVED"
+
+#         elif decision == "REJECT":
+#             subsite.status = "REJECTED_BY_DIRECTOR"
+#             db_decision = "REJECTED"
+
+#         else:
+#             return Response({"error": "Invalid decision"}, status=400)
+
+#         subsite.save()
+
+#         SurveyApproval.objects.create(
+#             survey=survey,
+#             subsite=subsite,
+#             approval_level=2,
+#             approved_by=request.user,
+#             decision=db_decision,
+#             remarks=remarks
+#         )
+
+#         return Response({
+#             "message": "Director decision saved and sent to Zonal"
+#         })
+
+
+#     # -------------------------
+#     # UPDATE PRIORITY + REMARKS + NOC
+#     # -------------------------
+#     @transaction.atomic
+#     def put(self, request, subsite_id):
+
+#         if request.user.role != "DIRECTOR":
+#             return Response({"error": "Unauthorized"}, status=403)
+
+#         subsite = get_object_or_404(SurveySubSite, id=subsite_id)
+
+#         new_priority = request.data.get("priority")
+#         remarks = request.data.get("remarks")
+#         noc_file = request.FILES.get("noc")
+
+#         # -------- PRIORITY UPDATE --------
+#         if new_priority is not None:
+#             try:
+#                 new_priority = int(new_priority)
+#             except ValueError:
+#                 return Response(
+#                     {"error": "Priority must be integer"},
+#                     status=400
+#                 )
+
+#             # duplicate priority check
+#             if SurveySubSite.objects.filter(
+#                 survey=subsite.survey,
+#                 priority=new_priority
+#             ).exclude(id=subsite.id).exists():
+
+#                 return Response({
+#                     "error": "Priority already exists in this survey"
+#                 }, status=400)
+
+#             subsite.priority = new_priority
+
+#         # -------- REMARKS UPDATE --------
+#         if remarks is not None:
+#             subsite.remarks = remarks
+
+#         # -------- NOC UPDATE --------
+#         if noc_file:
+
+#             if subsite.noc:
+#                 return Response({
+#                     "error": "NOC already uploaded and cannot be modified"
+#                 }, status=400)
+
+#             subsite.noc = noc_file
+
+#         subsite.save()
+
+#         return Response({
+#             "message": "Subsite updated by Director",
+#             "subsite_id": str(subsite.id),
+#             "priority": subsite.priority,
+#             "remarks": subsite.remarks,
+#             "noc_uploaded": bool(subsite.noc)
+#         })
+# class DirectorSubsiteDecisionAPI(APIView):
+
+#     permission_classes = [IsAuthenticated]
+
+#     @transaction.atomic
+#     def post(self, request, subsite_id):
+
+#         if request.user.role != "DIRECTOR":
+#             return Response({"error": "Unauthorized"}, status=403)
+
+#         subsite = get_object_or_404(SurveySubSite, id=subsite_id)
+#         survey = subsite.survey
+
+#         decision = request.data.get("decision")
+#         remarks = request.data.get("remarks", "")
+
+#         if subsite.status != "SUPERVISOR_APPROVED":
+#             return Response({"error": "Invalid state"}, status=400)
+
+#         if decision == "APPROVE":
+
+#             # 🔵 direct zonal ko send
+#             subsite.status = "SENT_TO_ZONAL"
+#             db_decision = "APPROVED"
+
+#         elif decision == "REJECT":
+
+#             subsite.status = "REJECTED_BY_DIRECTOR"
+#             db_decision = "REJECTED"
+
+#         else:
+#             return Response({"error": "Invalid decision"}, status=400)
+
+#         subsite.save()
+
+#         SurveyApproval.objects.create(
+#             survey=survey,
+#             subsite=subsite,
+#             approval_level=2,
+#             approved_by=request.user,
+#             decision=db_decision,
+#             remarks=remarks
+#         )
+
+#         return Response({
+#             "message": "Director decision saved and sent to Zonal"
+#         })
+# class DirectorSubsiteDecisionAPI(APIView):
+#     permission_classes = [IsAuthenticated]
+
+#     @transaction.atomic
+#     def post(self, request, subsite_id):
+
+#         subsite = get_object_or_404(SurveySubSite, id=subsite_id)
+#         survey = subsite.survey
+
+#         decision = request.data.get("decision")
+#         remarks = request.data.get("remarks", "")
+
+#         if subsite.status != "SUPERVISOR_APPROVED":
+#             return Response({"error": "Invalid state"}, status=400)
+
+#         if decision == "APPROVE":
+#             subsite.status = "DIRECTOR_APPROVED"
+#             db_decision = "APPROVED"
+
+#         elif decision == "REJECT":
+#             subsite.status = "REJECTED_BY_DIRECTOR"
+#             db_decision = "REJECTED"
+
+#         else:
+#             return Response({"error": "Invalid decision"}, status=400)
+
+#         subsite.save()
+
+#         SurveyApproval.objects.create(
+#             survey=survey,
+#             subsite=subsite,
+#             approval_level=2,
+#             approved_by=request.user,
+#             decision=db_decision,
+#             remarks=remarks
+#         )
+
+#         return Response({"message": "Director decision saved"})
+
+
+#     # 🔵 UPDATE PRIORITY
+#     @transaction.atomic
+#     def put(self, request, subsite_id):
+
+#         if request.user.role != "DIRECTOR":
+#             return Response({"error": "Unauthorized"}, status=403)
+
+#         subsite = get_object_or_404(SurveySubSite, id=subsite_id)
+
+#         new_priority = request.data.get("priority")
+
+#         if not new_priority:
+#             return Response({"error": "Priority required"}, status=400)
+
+#         # duplicate priority check
+#         if SurveySubSite.objects.filter(
+#             survey=subsite.survey,
+#             priority=new_priority
+#         ).exclude(id=subsite.id).exists():
+
+#             return Response(
+#                 {"error": "Priority already exists in this survey"},
+#                 status=400
+#             )
+
+#         subsite.priority = new_priority
+#         subsite.save(update_fields=["priority"])
+
+#         return Response({
+#             "message": "Priority updated by Director",
+#             "subsite_id": str(subsite.id),
+#             "priority": new_priority
+#         })
 # class DirectorSubsiteDecisionAPI(APIView):
 #     permission_classes = [IsAuthenticated]
 #     @transaction.atomic
@@ -1800,43 +2295,10 @@ class SupervisorSurveyListAPI(APIView):
         serializer = SupervisorSurveySerializer(surveys, many=True)
 
         return Response(serializer.data)
-    
-# class DirectorSubsiteListAPI(APIView):
-#     permission_classes = [IsAuthenticated]
 
-#     def get(self, request):
-
-#         if request.user.role != "DIRECTOR":
-#             return Response({"error": "Unauthorized"}, status=403)
-
-#         subsites = SurveySubSite.objects.filter(
-#             status__in=[
-#                 "SUPERVISOR_APPROVED",
-#                 "DIRECTOR_APPROVED",
-#                 "SENT_TO_ZONAL",
-#                 "SENT_TO_GNRB",
-#                 "REJECTED_BY_DIRECTOR",
-#                 "REJECTED_BY_ZONAL",
-#                 "FINAL_APPROVED"
-#             ]
-#         ).select_related(
-#             "survey",
-#             "survey__station",
-#             "survey__surveyor"
-#         ).prefetch_related(
-#             "subsites",
-#             "subsites__surveylocation",
-#             "subsites__surveymonument",
-#             "subsites__surveyskyvisibility",
-#             "subsites__surveypower",
-#             "subsites__surveyconnectivity",
-#             "subsites__photos"
-#         )
-
-#         serializer = DirectorSubsiteSerializer(subsites, many=True)
-#         return Response(serializer.data)
-    
+from django.db.models import Prefetch
 class DirectorSubsiteListAPI(APIView):
+
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -1844,6 +2306,7 @@ class DirectorSubsiteListAPI(APIView):
         if request.user.role != "DIRECTOR":
             return Response({"error": "Unauthorized"}, status=403)
 
+        # surveys that contain relevant subsites
         surveys = Survey.objects.filter(
             subsites__status__in=[
                 "SUPERVISOR_APPROVED",
@@ -1852,25 +2315,44 @@ class DirectorSubsiteListAPI(APIView):
                 "SENT_TO_GNRB",
                 "FINAL_APPROVED",
                 "REJECTED_BY_DIRECTOR",
-                "REJECTED_BY_ZONAL"
+                "REJECTED_BY_ZONAL",
+                "REJECTED_BY_GNRB"
             ]
         ).distinct().select_related(
             "station",
             "surveyor"
         ).prefetch_related(
-            "subsites__surveylocation",
-            "subsites__surveymonument",
-            "subsites__surveyskyvisibility",
-            "subsites__surveypower",
-            "subsites__surveyconnectivity",
-            "subsites__photos"
+
+            Prefetch(
+                "subsites",
+                queryset=SurveySubSite.objects.filter(
+                    status__in=[
+                        "SUPERVISOR_APPROVED",
+                        "DIRECTOR_APPROVED",
+                        "SENT_TO_ZONAL",
+                        "SENT_TO_GNRB",
+                        "FINAL_APPROVED",
+                        "REJECTED_BY_DIRECTOR",
+                        "REJECTED_BY_ZONAL",
+                        "REJECTED_BY_GNRB"
+                    ]
+                ).prefetch_related(
+                    "surveylocation",
+                    "surveymonument",
+                    "surveyskyvisibility",
+                    "surveypower",
+                    "surveyconnectivity",
+                    "photos"
+                )
+            )
+
         )
 
         serializer = DirectorSurveySerializer(surveys, many=True)
+
         return Response(serializer.data)
-
-
 class ZonalSubsiteListAPI(APIView):
+
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -1878,27 +2360,68 @@ class ZonalSubsiteListAPI(APIView):
         if request.user.role != "ZONAL_CHIEF":
             return Response({"error": "Unauthorized"}, status=403)
 
-        surveys = Survey.objects.filter(
-            subsites__status__in=[
-                "SENT_TO_ZONAL",
-                "SENT_TO_GNRB",
-                "FINAL_APPROVED",
-                "REJECTED_BY_ZONAL"
-            ]
-        ).distinct().select_related(
-            "station",
-            "surveyor"
-        ).prefetch_related(
-            "subsites__surveylocation",
-            "subsites__surveymonument",
-            "subsites__surveyskyvisibility",
-            "subsites__surveypower",
-            "subsites__surveyconnectivity",
-            "subsites__photos"
+        allowed_status = [
+            "DIRECTOR_APPROVED",
+            "SENT_TO_ZONAL",
+            "REJECTED_BY_ZONAL",
+            "SENT_TO_GNRB",
+            "FINAL_APPROVED",
+            "REJECTED_BY_GNRB",
+        ]
+
+        surveys = (
+            Survey.objects
+            .filter(subsites__status__in=allowed_status)
+            .distinct()
+            .select_related("station", "surveyor")
+            .prefetch_related(
+                Prefetch(
+                    "subsites",
+                    queryset=SurveySubSite.objects
+                        .filter(status__in=allowed_status)
+                        .prefetch_related(
+                            "surveylocation",
+                            "surveymonument",
+                            "surveyskyvisibility",
+                            "surveypower",
+                            "surveyconnectivity",
+                            "photos"
+                        )
+                )
+            )
         )
 
         serializer = ZonalSurveySerializer(surveys, many=True)
         return Response(serializer.data)
+# class ZonalSubsiteListAPI(APIView):
+#     permission_classes = [IsAuthenticated]
+
+#     def get(self, request):
+
+#         if request.user.role != "ZONAL_CHIEF":
+#             return Response({"error": "Unauthorized"}, status=403)
+
+#         surveys = Survey.objects.filter(
+#             subsites__status__in=[
+#                 "SENT_TO_GNRB",
+#                 "FINAL_APPROVED",
+#                 "REJECTED_BY_ZONAL",
+#                 "REJECTED_BY_GNRB"
+#             ]
+#         ).distinct().select_related(
+#             "station",
+#             "surveyor"
+#         ).prefetch_related(
+#             "subsites__surveylocation",
+#             "subsites__surveymonument",
+#             "subsites__surveyskyvisibility",
+#             "subsites__surveypower",
+#             "subsites__surveyconnectivity",
+#             "subsites__photos"
+#         )
+
+#         serializer = ZonalSurveySerializer(surveys, many=True)
+#         return Response(serializer.data)
     
 # class GNRBSubsiteListAPI(APIView):
 #     permission_classes = [IsAuthenticated]
@@ -1942,6 +2465,8 @@ class ZonalSubsiteListAPI(APIView):
 #         return Response(serializer.data)
 
 
+from django.db.models import Prefetch
+
 class GNRBSubsiteListAPI(APIView):
 
     permission_classes = [IsAuthenticated]
@@ -1951,22 +2476,34 @@ class GNRBSubsiteListAPI(APIView):
         if request.user.role != "GNRB":
             return Response({"error": "Unauthorized"}, status=403)
 
+        allowed_status = [
+            "SENT_TO_GNRB",
+            "FINAL_APPROVED",
+            "REJECTED_BY_GNRB"
+        ]
+
         surveys = Survey.objects.filter(
-            subsites__status__in=[
-                "SENT_TO_GNRB",
-                "FINAL_APPROVED",
-                "REJECTED_BY_GNRB"
-            ]
+            subsites__status__in=allowed_status
         ).distinct().select_related(
             "station",
             "surveyor"
         ).prefetch_related(
-            "subsites__surveylocation",
-            "subsites__surveymonument",
-            "subsites__surveyskyvisibility",
-            "subsites__surveypower",
-            "subsites__surveyconnectivity",
-            "subsites__photos"
+
+            Prefetch(
+                "subsites",
+                queryset=SurveySubSite.objects.filter(
+                    status__in=allowed_status
+                ).prefetch_related(
+                    "surveylocation",
+                    "surveymonument",
+                    "surveyskyvisibility",
+                    "surveypower",
+                    "surveyconnectivity",
+                    "photos"
+                )
+
+            )
+
         )
 
         serializer = GNRBSurveySerializer(surveys, many=True)
@@ -2054,29 +2591,10 @@ from .models import User
 import json
 from django.views.decorators.csrf import csrf_exempt
 
-@csrf_exempt
 def signup_view(request):
-    if request.method == "POST":
-        data = json.loads(request.body)
-
-        user = User.objects.create_user(
-            username=data["username"],
-            password=data["password"],
-            email=data["email"],
-            name=data["name"],
-            mobile=data["mobile"],
-            role=data["role"],
-            zone=data.get("zone", ""),
-            is_approved=False
-        )
-
-        return JsonResponse({
-            "message": "User registered successfully. Waiting for approval."
-        })
+    return render(request, "signup.html")
     
     
-
-
 from django.contrib.auth import authenticate, login, logout
 
 

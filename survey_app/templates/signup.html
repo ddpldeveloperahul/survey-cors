@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+{% comment %} <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -178,4 +178,143 @@
     }
   });
 </script>
+</html> {% endcomment %}
+
+
+
+
+<!DOCTYPE html>
+<html>
+<head>
+<title>Signup Test</title>
+
+<style>
+body{
+font-family: Arial;
+padding:40px;
+}
+
+input,select{
+display:block;
+margin-bottom:15px;
+padding:8px;
+width:260px;
+}
+
+button{
+padding:10px 20px;
+}
+</style>
+
+</head>
+
+<body>
+
+<h2>Signup Test</h2>
+
+<input id="username" placeholder="Username">
+<input id="password" placeholder="Password">
+<input id="name" placeholder="Name">
+<input id="email" placeholder="Email">
+<input id="mobile" placeholder="Mobile">
+
+<select id="role">
+<option value="">Select Role</option>
+<option value="SURVEYOR">Surveyor</option>
+<option value="SUPERVISOR">Supervisor</option>
+<option value="DIRECTOR">Director</option>
+<option value="ZONAL_CHIEF">Zonal Chief</option>
+<option value="GNRB">GNRB</option>
+
+
+
+</select>
+
+<select id="zone">
+<option value="">Select Zone</option>
+<option value="NORTH">North</option>
+<option value="SOUTH">South</option>
+<option value="EAST">East</option>
+<option value="WEST">West</option>
+</select>
+
+<select id="director">
+<option value="">Select Director</option>
+</select>
+
+<button onclick="signup()">Signup</button>
+
+<pre id="result"></pre>
+
+<script>
+
+const API = "http://127.0.0.1:8000"
+
+document.getElementById("zone").addEventListener("change", loadDirectors)
+
+async function loadDirectors(){
+
+const zone = document.getElementById("zone").value
+
+if(!zone) return
+
+const res = await fetch(`${API}/api/directors_by_zone/?zone=${zone}`)
+
+const data = await res.json()
+
+const director = document.getElementById("director")
+
+director.innerHTML = '<option value="">Select Director</option>'
+
+data.forEach(d => {
+
+const option = document.createElement("option")
+
+option.value = d.id
+option.text = d.name
+
+director.appendChild(option)
+
+})
+
+}
+
+async function signup(){
+
+const payload = {
+
+username: document.getElementById("username").value,
+password: document.getElementById("password").value,
+name: document.getElementById("name").value,
+email: document.getElementById("email").value,
+mobile: document.getElementById("mobile").value,
+role: document.getElementById("role").value,
+zone: document.getElementById("zone").value,
+director: document.getElementById("director").value
+
+}
+
+console.log(payload)
+
+const res = await fetch(`${API}/api/signup/`,{
+
+method:"POST",
+
+headers:{
+"Content-Type":"application/json"
+},
+
+body:JSON.stringify(payload)
+
+})
+
+const data = await res.json()
+
+document.getElementById("result").innerText = JSON.stringify(data,null,2)
+
+}
+
+</script>
+
+</body>
 </html>
