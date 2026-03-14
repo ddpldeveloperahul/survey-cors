@@ -103,7 +103,7 @@ EMI_SOURCE_CHOICES = [
  {
    "source": "None"
  }
-],
+]
 
 [
   {
@@ -264,8 +264,22 @@ http://127.0.0.1:8000/api/survey/bab11d65-0444-4a17-bbbc-9db14b4a1b14/supervisor
 }
 {
 "subsite_id": "b02e2b1c-0535-46d2-89f9-f23c2af3f4fe",
-"decision": "APPROVE",
+"decision": "REJECT",
 "remarks": "Verified"
+}
+
+put
+http://127.0.0.1:8000/api/survey/80e182e1-5814-4678-b2b8-37a3a4f70697/supervisor/
+
+{
+"subsite_id": "e9d64d8d-57d2-4723-a820-ce0cf9ced8e0",
+"priority": 1,
+}
+
+{
+"subsite_id": "e9d64d8d-57d2-4723-a820-ce0cf9ced8e0",
+"priority": 1,
+"remarks": "ksfksdf ksdfksjd kfskddfk"
 }
 http://127.0.0.1:8000/api/survey/bab11d65-0444-4a17-bbbc-9db14b4a1b14/supervisor/submit/
 {
@@ -283,6 +297,14 @@ https://survey.drdesigntech.com/api/subsite/c2982256-09e9-4891-8d2d-24aa82e342b8
  "decision": "REJECT",
  "remarks": "Location not suitable"
 }
+put
+swap, single update 
+http://127.0.0.1:8000/api/subsite/ff6c2eb6-48b4-491d-a4f6-cb8ce0a7636a/director-decision/
+
+{
+ "priority":1
+}
+
 https://survey.drdesigntech.com/api/subsite/c2982256-09e9-4891-8d2d-24aa82e342b8/send-to-zonal/
 
 http://127.0.0.1:8000/api/subsite/3a9553a3-cf4f-4d16-af8b-387ffe754807/zonal-decision/

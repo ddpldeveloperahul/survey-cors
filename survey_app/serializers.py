@@ -162,7 +162,7 @@ class LoginSerializer(serializers.Serializer):
 
         if not user.is_approved:
             raise serializers.ValidationError("Account not approved yet")
-
+            
         data["user"] = user
 
         return data
