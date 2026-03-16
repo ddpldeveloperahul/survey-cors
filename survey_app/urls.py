@@ -156,4 +156,10 @@ urlpatterns = [
     path("directors_by_zone/", DirectorByZoneAPI.as_view()),
     
     #
+    
+    path("admin/users/", AdminUserListAPI.as_view()),
+    path("admin/user/<uuid:user_id>/approve/", AdminApproveUserAPI.as_view()),
+    path("admin/user/<uuid:user_id>/assign-director/", AdminAssignDirectorAPI.as_view()),
+    path("admin/user/<uuid:user_id>/change-role/", AdminChangeRoleAPI.as_view()),
+    path("admin/surveys/", AdminSurveyListAPI.as_view()),
 ]

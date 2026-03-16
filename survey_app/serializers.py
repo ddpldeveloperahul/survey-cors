@@ -161,8 +161,9 @@ class LoginSerializer(serializers.Serializer):
             raise serializers.ValidationError("Invalid username or password")
 
         if not user.is_approved:
-            raise serializers.ValidationError("Account not approved yet")
-            
+            # raise serializers.ValidationError("Account not approved yet")
+            serializers.erro
+
         data["user"] = user
 
         return data
@@ -1370,3 +1371,48 @@ class GNRBSurveySerializer(serializers.ModelSerializer):
 #             return approval.approved_by.username
 
 #         return None
+
+
+
+
+class AdminSubsiteSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = SurveySubSite
+        fields = [
+            "id",
+            "location",
+            "priority",
+            "status",
+            "remarks",
+            "noc",
+            "created_at"
+        ]
+
+
+class AdminSurveySerializer(serializers.ModelSerializer):
+
+    state_name = serializers.CharField(source="state.name", read_only=True)
+    district_name = serializers.CharField(source="district.name", read_only=True)
+    subdistrict_name = serializers.CharField(source="subdistrict.name", read_only=True)
+    station_name = serializers.CharField(source="station.name", read_only=True)
+
+    subsites = AdminSubsiteSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Survey
+        fields = [
+            "id",
+            "state",
+            "state_name",
+            "district",
+            "district_name",
+            "subdistrict",
+            "subdistrict_name",
+            "station",
+            "station_name",
+            "status",
+            "remarks",
+            "created_at",
+            "subsites"
+        ]
